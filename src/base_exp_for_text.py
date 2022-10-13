@@ -51,7 +51,7 @@ from src.machine_learning_util import set_seed, set_device, init_logger, Average
 
 class CFG:
     # common
-    EXP_ID = 'BASE'
+    EXP_ID = 'TEXT_BASE'
     apex = True
     debug = False
     seed = 71
@@ -66,10 +66,10 @@ class CFG:
 
     # training    
     num_epochs = 5
-    batch_size = 16
+    batch_size = 8
     num_workers = 0
     scheduler = 'cosine'
-    lr = 1e-3
+    lr = 5e-6
     min_lr=1e-6
     weigth_decay = 0.01
     scheduler = 'cosine'
@@ -78,6 +78,12 @@ class CFG:
     n_accumulate=1
     print_freq = 100
     eval_freq = 200
+
+    # text competition
+    model_name = 'microsoft/deberta-v3-large'
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    max_len = 1024
+    encode_type = 'head_and_tail' # or ''
 
 
 set_seed(CFG.seed)
@@ -110,73 +116,166 @@ def get_score(outputs, targets):
     return mcrmse
 
 
-class ForTableDataset(torch.utils.data.Dataset):
-    def __init__(self, df):
+class ForTextDataset(Dataset):
+    def __init__(self, df, tokenizer, max_length):
         self.df = df
-        self.features = df[CFG.numerical_cols].values
+        self.max_len = CFG.max_len
+        self.text = df['full_text'].values
+        self.tokenizer = CFG.tokenizer
         self.targets = df[CFG.target_cols].values
 
     def __len__(self):
         return len(self.df)
 
-    def __getitem__(self, index):
-        features = self.features[index]
-        targets = self.targets[index]
-            
-        return {
-            'features' : torch.FloatTensor(features),
-            'targets' : torch.FloatTensor(targets),
+    def cut_head_and_tail(self, text):
+        input_ids = self.tokenizer.encode(text)
+        n_token = len(input_ids)
+
+        if n_token == self.max_len:
+            input_ids = input_ids
+            attention_mask = [1 for _ in range(self.max_len)]
+            token_type_ids = [1 for _ in range(self.max_len)]
+        elif n_token < self.max_len:
+            pad = [1 for _ in range(self.max_len-n_token)]
+            input_ids = input_ids + pad
+            attention_mask = [1 if n_token > i else 0 for i in range(self.max_len)]
+            token_type_ids = [1 if n_token > i else 0 for i in range(self.max_len)]
+        else:
+            harf_len = (self.max_len-2)//2
+            _input_ids = input_ids[1:-1]
+            input_ids = [0]+ _input_ids[:harf_len] + _input_ids[-harf_len:] + [2]
+            attention_mask = [1 for _ in range(self.max_len)]
+            token_type_ids = [1 for _ in range(self.max_len)]
+
+        d = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "token_type_ids": token_type_ids,
         }
+        return d
 
 
-class ForTableModel(nn.Module):
-    def __init__(self, CFG):
-        super(ForTableModel, self).__init__()
-        self.hidden_size = [1500, 1250, 1000, 750]
-        self.dropout_value = [0.5, 0.35, 0.3, 0.25]
-
-        self.batch_norm1 = nn.BatchNorm1d(len(CFG.numerical_cols))
-        self.dense1 = nn.Linear(len(CFG.numerical_cols), self.hidden_size[0])
-        
-        self.batch_norm2 = nn.BatchNorm1d(self.hidden_size[0])
-        self.dropout2 = nn.Dropout(self.dropout_value[0])
-        self.dense2 = nn.Linear(self.hidden_size[0], self.hidden_size[1])
-
-        self.batch_norm3 = nn.BatchNorm1d(self.hidden_size[1])
-        self.dropout3 = nn.Dropout(self.dropout_value[1])
-        self.dense3 = nn.Linear(self.hidden_size[1], self.hidden_size[2])
-
-        self.batch_norm4 = nn.BatchNorm1d(self.hidden_size[2])
-        self.dropout4 = nn.Dropout(self.dropout_value[2])
-        self.dense4 = nn.Linear(self.hidden_size[2], self.hidden_size[3])
-
-        self.batch_norm5 = nn.BatchNorm1d(self.hidden_size[3])
-        self.dropout5 = nn.Dropout(self.dropout_value[3])
-        self.dense5 = nn.utils.weight_norm(nn.Linear(self.hidden_size[3], len(CFG.target_cols)))
-    
-    def forward(self, x):
-        x = self.batch_norm1(x)
-        x = F.leaky_relu(self.dense1(x))
-        
-        x = self.batch_norm2(x)
-        x = self.dropout2(x)
-        x = F.leaky_relu(self.dense2(x))
-
-        x = self.batch_norm3(x)
-        x = self.dropout3(x)
-        x = F.leaky_relu(self.dense3(x))
-
-        x = self.batch_norm4(x)
-        x = self.dropout4(x)
-        x = F.leaky_relu(self.dense4(x))
-
-        x = self.batch_norm5(x)
-        x = self.dropout5(x)
-        x = self.dense5(x)
-        return x
+    def __getitem__(self, index):
+        text = self.text[index]
+        if CFG.encode_type == 'head_and_tail':
+            inputs = self.cut_head_and_tail(text)
+        else:
+            inputs = self.tokenizer.encode_plus(
+                text,
+                truncation=True,
+                add_special_tokens=True,
+                max_length = self.max_len
+            )
+        return {
+            'input_ids':inputs['input_ids'],
+            'attention_mask':inputs['attention_mask'],
+            'target':self.targets[index]
+            }
 
 
-def train_one_epoch(model, dataloader, device, epoch, criterion, optimizer, scheduler):
+class Collate:
+    def __init__(self, tokenizer, isTrain=True):
+        self.tokenizer = tokenizer
+        self.isTrain = isTrain
+
+    def __call__(self, batch):
+        output = dict()
+        output["input_ids"] = [sample["input_ids"] for sample in batch]
+        output["attention_mask"] = [sample["attention_mask"] for sample in batch]
+        if self.isTrain:
+            output["target"] = [sample["target"] for sample in batch]
+
+        # calculate max token length of this batch
+        batch_max = max([len(ids) for ids in output["input_ids"]])
+
+        # add padding
+        if self.tokenizer.padding_side == "right":
+            output["input_ids"] = [s + (batch_max - len(s)) * [self.tokenizer.pad_token_id] for s in output["input_ids"]]
+            output["attention_mask"] = [s + (batch_max - len(s)) * [0] for s in output["attention_mask"]]
+        else:
+            output["input_ids"] = [(batch_max - len(s)) * [self.tokenizer.pad_token_id] + s for s in output["input_ids"]]
+            output["attention_mask"] = [(batch_max - len(s)) * [0] + s for s in output["attention_mask"]]
+
+        # convert to tensors
+        output["input_ids"] = torch.tensor(output["input_ids"], dtype=torch.long)
+        output["attention_mask"] = torch.tensor(output["attention_mask"], dtype=torch.long)
+        if self.isTrain:
+            output["target"] = torch.tensor(output["target"], dtype=torch.float)
+
+        return output
+
+collate_fn = Collate(CFG.tokenizer, isTrain=True)
+
+
+def freeze(module):
+    """
+    Freezes module's parameters.
+    """
+
+    for parameter in module.parameters():
+        parameter.requires_grad = False
+
+
+class ForTextModel(nn.Module):
+    def __init__(self, model_name):
+        super(FeedBackModel, self).__init__()
+
+        self.cfg = CFG
+        self.config = AutoConfig.from_pretrained(model_name)
+        self.config.hidden_dropout_prob = 0
+        self.config.attention_probs_dropout_prob = 0
+
+        self.model = AutoModel.from_pretrained(model_name, config=self.config)
+
+        self.output = nn.Sequential(
+            nn.LayerNorm(self.config.hidden_size),
+            nn.Linear(self.config.hidden_size, self.cfg.target_size)
+        )
+
+
+        # Freeze
+        if self.cfg.freezing:
+            freeze(self.model.embeddings)
+            # freeze(self.model.encoder.layer[:2])
+
+        # Gradient Checkpointing
+        #if self.cfg.gradient_checkpoint:
+        #    self.model.gradient_checkpointing_enable() 
+
+        #if self.cfg.reinit_layers > 0:
+        #    layers = self.model.encoder.layer[-self.cfg.reinit_layers:]
+        #    for layer in layers:
+        #        for module in layer.modules():
+        #            self._init_weights(module)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+
+    def forward(self, ids, mask, token_type_ids=None, targets=None):
+        if token_type_ids:
+            transformer_out = self.model(ids, mask, token_type_ids)
+        else:
+            transformer_out = self.model(ids, mask)
+
+        # simple CLS
+        sequence_output = transformer_out[0][:, 0, :]
+
+        logits = self.output(sequence_output)
+
+        return logits
+
+
+def train_one_epoch(model, optimizer, scheduler, dataloader, valid_loader, device, epoch, best_score, valid_labels):
     model.train()
     scaler = GradScaler(enabled=CFG.apex)
 
@@ -221,11 +320,31 @@ def train_one_epoch(model, dataloader, device, epoch, criterion, optimizer, sche
                 )
             )
 
-    return epoch_loss
+        if (step > 0) & (step % CFG.eval_freq == 0) :
+
+            valid_epoch_loss, pred = valid_one_epoch(model, valid_loader, device, epoch)
+
+            score = get_score(pred, valid_labels)
+
+            LOGGER.info(f'Epoch {epoch+1} Step {step} - avg_train_loss: {epoch_loss:.4f}  avg_val_loss: {valid_epoch_loss:.4f}')
+            LOGGER.info(f'Epoch {epoch+1} Step {step} - Score: {score:.4f}')
+
+            if score < best_score:
+                best_score = score
+                LOGGER.info(f'Epoch {epoch+1} Step {step} - Save Best Score: {best_score:.4f} Model')
+                torch.save({'model': model.state_dict(),
+                            'predictions': pred},
+                            OUTPUT_DIR+f"{CFG.model_name.replace('/', '-')}_fold{fold}_best.pth")
+
+            # model.train()
+
+    gc.collect()
+
+    return epoch_loss, valid_epoch_loss, pred, best_score
 
 
 @torch.no_grad()
-def valid_one_epoch(model, dataloader, device, epoch, criterion):
+def valid_one_epoch(model, dataloader, device, epoch):
     model.eval()
 
     dataset_size = 0
@@ -268,12 +387,13 @@ def train_loop(fold):
     valid_data = train[train.kfold == fold].reset_index(drop=True)
     valid_labels = valid_data[CFG.target_cols].values
 
-    trainDataset = ForTableDataset(train_data)
-    validDataset = ForTableDataset(valid_data)
+    trainDataset = ForTextDataset(train_data, CFG.tokenizer, CFG.max_len)
+    validDataset = ForTextDataset(valid_data, CFG.tokenizer, CFG.max_len)
 
     train_loader = DataLoader(trainDataset,
                               batch_size = CFG.batch_size,
                               shuffle=True,
+                              collate_fn = collate_fn,
                               num_workers = CFG.num_workers,
                               pin_memory = True,
                               drop_last=True)
@@ -281,11 +401,13 @@ def train_loop(fold):
     valid_loader = DataLoader(validDataset,
                               batch_size = CFG.batch_size * 2,
                               shuffle=False,
+                              collate_fn = collate_fn,
                               num_workers = CFG.num_workers,
                               pin_memory = True,
                               drop_last=False)
 
-    model = ForTableModel(CFG)
+    model = ForTextModel(CFG.model_name)
+    torch.save(model.config, OUTPUT_DIR+'config.pth')
     model.to(device)
     optimizer = AdamW(model.parameters(), lr=CFG.lr, weight_decay=CFG.weigth_decay)
     num_train_steps = int(len(train_data) / CFG.batch_size * CFG.epochs)
@@ -295,12 +417,13 @@ def train_loop(fold):
     best_score = 100
 
     for epoch in range(CFG.num_epochs):
+        if epoch == (CFG.num_epochs - 1):
+            break
 
         start_time = time.time()
 
-        train_epoch_loss = train_one_epoch(model, train_loader, device, epoch, criterion, optimizer, scheduler)
-        valid_epoch_loss, valid_preds = valid_one_epoch(model, valid_loader, device, epoch, criterion)
-    
+        train_epoch_loss, valid_epoch_loss, pred, best_score = train_one_epoch(model, optimizer, scheduler, train_loader, valid_loader, device, epoch, best_score, valid_labels)
+
         score = get_score(pred, valid_labels)
 
         elapsed = time.time() - start_time
@@ -313,9 +436,9 @@ def train_loop(fold):
             LOGGER.info(f'Epoch {epoch+1} - Save Best Score: {best_score:.4f} Model')
             torch.save({'model': model.state_dict(),
                         'predictions': pred},
-                        OUTPUT_DIR+f"{CFG.EXP_ID}_fold{fold}_best.pth")
+                        OUTPUT_DIR+f"{CFG.model_name.replace('/', '-')}_fold{fold}_best.pth")
 
-    predictions = torch.load(OUTPUT_DIR+f"{CFG.EXP_ID}_fold{fold}_best.pth",
+    predictions = torch.load(OUTPUT_DIR+f"{CFG.model_name.replace('/', '-')}_fold{fold}_best.pth",
                              map_location=torch.device('cpu'))['predictions']
     valid_data['pred_0'] = predictions[:, 0]
     valid_data['pred_1'] = predictions[:, 1]
