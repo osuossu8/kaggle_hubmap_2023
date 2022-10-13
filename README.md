@@ -1,15 +1,12 @@
 # CompetitionBase
 
-# 事前に新しいリポジトリをGitHubで作成しておく
+# create repo on github
 
-# 古いリポジトリをクローンする
 $ git clone https://github.com/xxx/old-repository.git
 $ cd old-repository
 
-# 古いリポジトリのGitの更新情報を削除する
 $ rm -rf .git
 
-# 新しいリポジトリを新規作成する
 $ git init
 $ git add .
 $ git commit -m "Initial commit"
