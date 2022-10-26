@@ -45,7 +45,7 @@ from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_wi
 
 
 from src.scheduler import get_scheduler
-from src.split_data import split_kfold, split_stratified, split_group, split_stratified_group, split_multilabel_stratified
+from src.split_data import DataSplitter
 from src.machine_learning_util import set_seed, set_device, init_logger, AverageMeter, to_pickle, unpickle, asMinutes, timeSince
 
 
@@ -54,15 +54,20 @@ class CFG:
     EXP_ID = 'BASE'
     apex = True
     debug = False
+    train = True
     seed = 71
     num_fold = 5 
     trn_fold = [i for i in range(num_fold)]
 
+    # data
+    train_path = ''
+    test_path = ''
+
     # competition specific
-    id_col = ''
+    id_col = 'PassengerId'
     group_col = ''
-    target_cols = ["cohesion", "syntax", "vocabulary", "phraseology", "grammar", "conventions"]
-    target_size = len(target_cols)
+    target_col = ['Survived']
+    target_size = len(target_col)
 
     # training    
     num_epochs = 5
@@ -89,9 +94,39 @@ if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
 
+train = pd.read_csv(CFG.train_path)
+train = DataSplitter.split_stratified(train, CFG)
+
+CFG.categorical_col = ['Name', 'Sex', 'Ticket', 'Cabin', 'Embarked']
+
+numerical_col = []
+for col in train.columns:
+    if col in [CFG.id_col, CFG.group_col, 'kfold'] + CFG.categorical_col + CFG.target_col:
+        continue
+    if 'float' in str(train[col].dtype):
+        numerical_col.append(col)
+    elif 'int' in str(train[col].dtype):
+        numerical_col.append(col)
+    else:
+        raise Error
+
+CFG.numerical_col = numerical_col
+
+print(len(CFG.categorical_col), len(CFG.numerical_col))
+
+
+scaler = StandardScaler()
+train[CFG.numerical_col] = pd.DataFrame(scaler.fit_transform(train[CFG.numerical_col].fillna(-999)))
+
+
+test = pd.read_csv(CFG.test_path)
+test[CFG.numerical_col] = pd.DataFrame(scaler.transform(test[CFG.numerical_col].fillna(-999)))
+
+
+
 def criterion(outputs, targets):
-    #loss_fct = nn.MSELoss()
-    loss_fct = nn.BCEWithLogitsLoss()
+    loss_fct = nn.MSELoss()
+    # loss_fct = nn.BCEWithLogitsLoss()
     loss = loss_fct(outputs, targets)
     return loss
 
@@ -110,23 +145,32 @@ def get_score(outputs, targets):
     return mcrmse
 
 
+def get_score(outputs, targets):
+    return metrics.roc_auc_score(targets, outputs)
+
+
 class ForTableDataset(torch.utils.data.Dataset):
-    def __init__(self, df):
+    def __init__(self, df, is_train=True):
         self.df = df
-        self.features = df[CFG.numerical_cols].values
-        self.targets = df[CFG.target_cols].values
+        self.is_train = is_train
+        self.features = df[CFG.numerical_col].values
+        
+        if self.is_train:
+            self.targets = df[CFG.target_col].values
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, index):
+        res = {}
         features = self.features[index]
-        targets = self.targets[index]
-            
-        return {
-            'features' : torch.FloatTensor(features),
-            'targets' : torch.FloatTensor(targets),
-        }
+        res['features'] = torch.FloatTensor(features)
+        
+        if self.is_train:
+            targets = self.targets[index]
+            res['targets'] = torch.FloatTensor(targets)
+        
+        return res
 
 
 class ForTableModel(nn.Module):
@@ -180,7 +224,7 @@ def train_one_epoch(model, dataloader, device, epoch, criterion, optimizer, sche
         end = time.time()
 
         if step % CFG.print_freq == 0 or step == (len(dataloader) - 1):
-            print(
+            LOGGER.info(
                 "Epoch: [{0}][{1}/{2}] "
                 "Loss: [{3}] "
                 "Elapsed {remain:s} ".format(
@@ -220,7 +264,7 @@ def valid_one_epoch(model, dataloader, device, criterion):
         end = time.time()
 
         if step % CFG.print_freq == 0 or step == (len(dataloader) - 1):
-            print(
+            LOGGER.info(
                 "EVAL: [{0}/{1}] "
                 "Loss: [{2}] "
                 "Elapsed {remain:s} ".format(
@@ -232,6 +276,20 @@ def valid_one_epoch(model, dataloader, device, criterion):
     return epoch_loss, pred
 
 
+@torch.no_grad()
+def inference(model, dataloader, device):
+    model.eval()
+    pred = []
+
+    for step, data in tqdm(enumerate(dataloader)):
+        features = data['features'].to(device, dtype=torch.float)
+        outputs = model(features)
+        pred.append(outputs.to('cpu').numpy())
+
+    pred = np.concatenate(pred)
+    return pred
+
+
 def train_loop(fold):
     LOGGER.info(f'-------------fold:{fold} training-------------')
 
@@ -239,8 +297,8 @@ def train_loop(fold):
     valid_data = train[train.kfold == fold].reset_index(drop=True)
     valid_labels = valid_data[CFG.target_cols].values
 
-    trainDataset = ForTableDataset(train_data)
-    validDataset = ForTableDataset(valid_data)
+    train_dataset = ForTableDataset(train_data, is_train=True)
+    valid_dataset = ForTableDataset(valid_data, is_train=True)
 
     train_loader = DataLoader(trainDataset,
                               batch_size = CFG.batch_size,
@@ -266,7 +324,6 @@ def train_loop(fold):
     best_score = 100
 
     for epoch in range(CFG.num_epochs):
-
         start_time = time.time()
 
         train_epoch_loss = train_one_epoch(model, train_loader, device, epoch, criterion, optimizer, scheduler)
@@ -289,11 +346,6 @@ def train_loop(fold):
     predictions = torch.load(OUTPUT_DIR+f"{CFG.EXP_ID}_fold{fold}_best.pth",
                              map_location=torch.device('cpu'))['predictions']
     valid_data['pred_0'] = predictions[:, 0]
-    valid_data['pred_1'] = predictions[:, 1]
-    valid_data['pred_2'] = predictions[:, 2]
-    valid_data['pred_3'] = predictions[:, 3]
-    valid_data['pred_4'] = predictions[:, 4]
-    valid_data['pred_5'] = predictions[:, 5]
 
     torch.cuda.empty_cache()
     gc.collect()
@@ -304,8 +356,8 @@ def train_loop(fold):
 if __name__ == '__main__':
 
     def get_result(oof_df):
-        labels = oof_df[CFG.target_cols].values
-        preds = oof_df[['pred_0', 'pred_1', 'pred_2', 'pred_3', 'pred_4', 'pred_5']].values
+        labels = oof_df[CFG.target_col].values
+        preds = oof_df[['pred_0']].values
         score = get_score(preds, labels)
         LOGGER.info(f'Score: {score:<.4f}')
 
@@ -321,4 +373,26 @@ if __name__ == '__main__':
         LOGGER.info(f"========== CV ==========")
         get_result(oof_df)
         oof_df.to_csv(OUTPUT_DIR+f'oof_df.csv', index=False)
+
+    else:
+        testDataset = ForTableDataset(test, is_train=False)
+        test_loader = torch.utils.data.DataLoader(testDataset,
+                          batch_size = CFG.batch_size * 2,
+                          shuffle=False,
+                          num_workers = CFG.num_workers,
+                          pin_memory = True,
+                          drop_last=False)
+
+        test_preds = []
+        for fold in range(CFG.num_fold):
+            model = ForTableModel(CFG)
+            model.to(device)
+            model.load_state_dict(torch.load(OUTPUT_DIR+f"{CFG.EXP_ID}_fold{fold}_best.pth",
+                                  map_location=torch.device('cpu'))['model'])
+
+        test_pred = inference(model, test_loader, device)
+        test_preds.append(test_pred)
+
+        test_pred = np.mean(test_preds, 0)
+
 
