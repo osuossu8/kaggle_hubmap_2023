@@ -4,13 +4,13 @@ import pytest
 import pandas as pd
 from pandas.testing import assert_frame_equal
 sys.path.append(os.getcwd())
-from src.split_data import BaseCFG, DataSplitter
+from src.split_data import BaseConfig, DataSplitter
 
 
 class TestDataSplitter:
     def setup_class(self):
-        self.CFG = BaseCFG(42, 5, 'group', 'y')       
-        self.MultiTargetCFG = BaseCFG(42, 5, 'group', ['y1', 'y2', 'y3'])
+        self.CFG = BaseConfig(42, 5, 'group', 'y')       
+        self.MultiTargetCFG = BaseConfig(42, 5, 'group', ['y1', 'y2', 'y3'])
 
     def test_split_kfold(self):
         # Arrange
