@@ -4,18 +4,13 @@ import pytest
 import pandas as pd
 from pandas.testing import assert_frame_equal
 sys.path.append(os.getcwd())
-from src.split_data import DataSplitter
+from src.split_data import BaseCFG, DataSplitter
 
 
 class TestDataSplitter:
     def setup_class(self):
-        self.CFG = {
-            'seed' : 42,
-            'num_fold': 5,
-            'group_col': 'group',
-            'target_col': 'y',
-            'target_multi_cols': ['y1', 'y2', 'y3'],
-        }
+        self.CFG = BaseCFG(42, 5, 'group', 'y')       
+        self.MultiTargetCFG = BaseCFG(42, 5, 'group', ['y1', 'y2', 'y3'])
 
     def test_split_kfold(self):
         input_df = pd.DataFrame()
@@ -31,7 +26,6 @@ class TestDataSplitter:
         
         assert_frame_equal(expect_df, actual_df)
         
-        
     def test_split_stratified(self):
         input_df = pd.DataFrame()
         input_df['y'] = [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1]
@@ -45,7 +39,6 @@ class TestDataSplitter:
         actual_df = DataSplitter.split_stratified(input_df, self.CFG)
         
         assert_frame_equal(expect_df, actual_df)
-        
         
     def test_split_group(self):
         input_df = pd.DataFrame()
@@ -63,7 +56,6 @@ class TestDataSplitter:
         
         assert_frame_equal(expect_df, actual_df)
         
-        
     def test_split_stratified_group(self):
         input_df = pd.DataFrame()
         input_df['group'] = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5]
@@ -79,7 +71,6 @@ class TestDataSplitter:
         actual_df = DataSplitter.split_stratified_group(input_df, self.CFG)
         
         assert_frame_equal(expect_df, actual_df)
-        
 
     def test_split_multilabel_stratified(self):
         input_df = pd.DataFrame()
@@ -95,6 +86,6 @@ class TestDataSplitter:
         expect_df['x'] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
         expect_df['kfold'] = [1, 1, 2, 1, 4, 0, 0, 3, 4, 4, 0, 2, 3, 2, 3]
         
-        actual_df = DataSplitter.split_multilabel_stratified(input_df, self.CFG)
+        actual_df = DataSplitter.split_multilabel_stratified(input_df, self.MultiTargetCFG)
         
         assert_frame_equal(expect_df, actual_df)
