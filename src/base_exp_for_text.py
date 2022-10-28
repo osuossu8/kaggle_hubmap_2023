@@ -68,11 +68,10 @@ class CFG:
     num_epochs = 5
     batch_size = 8
     num_workers = 0
-    scheduler = 'cosine'
     lr = 5e-6
     min_lr=1e-6
     weigth_decay = 0.01
-    scheduler = 'cosine'
+    scheduler = 'linear'
     num_warmup_steps = 0
     num_cycles=0.5
     n_accumulate=1
