@@ -1,6 +1,6 @@
 # CompetitionBase
 
-## https://docs.github.com/ja/repositories/creating-and-managing-repositories/duplicating-a-repository
+- https://docs.github.com/ja/repositories/creating-and-managing-repositories/duplicating-a-repository
 
 - 1. create repo on github
 
