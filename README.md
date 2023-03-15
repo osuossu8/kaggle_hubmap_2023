@@ -1,19 +1,15 @@
 # CompetitionBase
 
-# create repo on github
+## https://docs.github.com/ja/repositories/creating-and-managing-repositories/duplicating-a-repository
 
-$ git clone https://github.com/xxx/old-repository.git
+・create repo on github
 
-$ cd old-repository
+$ git clone --bare https://github.com/EXAMPLE-USER/OLD-REPOSITORY.git
 
-$ rm -rf .git
+$ cd OLD-REPOSITORY.git
 
-$ git init
+$ git push --mirror https://github.com/EXAMPLE-USER/NEW-REPOSITORY.git
 
-$ git add .
+$ cd ..
 
-$ git commit -m "Initial commit"
-
-$ git remote add origin https://github.com/xxx/new-repository.git
-
-$ git push -u origin master
+$ rm -rf OLD-REPOSITORY.git
