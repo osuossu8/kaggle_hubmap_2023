@@ -1,18 +1,25 @@
-# CompetitionBase
+# kaggle hubmap 2023
 
-- https://docs.github.com/ja/repositories/creating-and-managing-repositories/duplicating-a-repository
+## data download
 
-- 1. create repo on github
+$ kaggle datasets download -w kaerunantoka/hubmap-converted-to-coco-ds1-5fold
 
-- 2. run commands
-``` 
-$ git clone --bare https://github.com/EXAMPLE-USER/OLD-REPOSITORY.git
+$ unzip hubmap-converted-to-coco-ds1-5fold.zip -d hubmap-converted-to-coco-ds1-5fold
 
-$ cd OLD-REPOSITORY.git
+$ rm hubmap-converted-to-coco-ds1-5fold.zip
 
-$ git push --mirror https://github.com/EXAMPLE-USER/NEW-REPOSITORY.git
+## setup mmdet 3.0.0
 
-$ cd ..
+$ pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
 
-$ rm -rf OLD-REPOSITORY.git
-```
+$ pip install mmcv==2.0.0rc4 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.12/index.html
+
+$ git clone https://github.com/open-mmlab/mmdetection.git
+
+$ pip install "mmdet==3.0.0"
+
+## training
+
+$ cd mmdetection
+
+$ python tools/train.py  ../configs/hubmap/custom_config.py
