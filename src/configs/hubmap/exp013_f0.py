@@ -1,6 +1,6 @@
 fold = 1
 SEED = 42
-EPOCHS = 30
+EPOCHS = 20 # 30
 NUM_CLASSES = 1
 DATA_ROOT = f'/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/'
 IMG_SIZE_HW = (768, 768)
@@ -121,25 +121,25 @@ train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=EPOCHS, val_interval=1)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 
-LR = 5e-4
+LR = 3e-5 # 5e-4
 param_scheduler = [
     # learning rate scheduler
     # During the first 10 epochs, learning rate increases from 0 to lr * 10
     # during the next 20 epochs, learning rate decreases from lr * 10 to lr * 1e-4
     dict(
         type='CosineAnnealingLR',
-        T_max=10,
+        T_max=8,
         eta_min=LR * 10,
         begin=0,
-        end=10,
+        end=8,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingLR',
-        T_max=20,
+        T_max=15,
         eta_min=LR * 1e-4,
-        begin=10,
-        end=30,
+        begin=8,
+        end=20,
         by_epoch=True,
         convert_to_iter_based=True),
     # momentum scheduler
@@ -147,34 +147,34 @@ param_scheduler = [
     # during the next 20 epochs, momentum increases from 0.85 / 0.95 to 1
     dict(
         type='CosineAnnealingMomentum',
-        T_max=10,
+        T_max=8,
         eta_min=0.85 / 0.95,
         begin=0,
-        end=10,
+        end=8,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingMomentum',
-        T_max=20,
+        T_max=15,
         eta_min=1,
-        begin=10,
-        end=30,
+        begin=8,
+        end=20,
         by_epoch=True,
         convert_to_iter_based=True)
 ]
-optim_wrapper = dict(
-    _delete_ = True,
-    type='OptimWrapper',
-    optimizer=dict(type='SGD', lr=LR, momentum=0.9, weight_decay=0.0001))
- 
 #optim_wrapper = dict(
 #    _delete_ = True,
 #    type='OptimWrapper',
-#    optimizer=dict(
-#        type='AdamW',
-#        lr=LR,
-#        betas=(0.9, 0.999),
-#        weight_decay=0.0001))
+#    optimizer=dict(type='SGD', lr=LR, momentum=0.9, weight_decay=0.0001))
+ 
+optim_wrapper = dict(
+    _delete_ = True,
+    type='OptimWrapper',
+    optimizer=dict(
+        type='AdamW',
+        lr=LR,
+        betas=(0.9, 0.999),
+        weight_decay=0.0001))
 
 randomness=dict(seed=SEED)
 
