@@ -18,6 +18,8 @@ $ git clone https://github.com/open-mmlab/mmdetection.git
 
 $ pip install "mmdet==3.0.0"
 
+$ pip install "mmcls>=1.0.0rc6"
+
 ## training
 
 $ cd mmdetection
