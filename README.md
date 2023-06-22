@@ -26,4 +26,4 @@ $ python mmdetection/tools/train.py configs/hubmap/custom_config.py
 
 ## upload output
 
-$ kaggle datasets create --dir-mode zip -p mmdetection/work_dirs/exp012_f0
+$ kaggle datasets create --dir-mode zip -p work_dirs/exp012_f0
