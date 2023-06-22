@@ -22,9 +22,7 @@ $ pip install "mmcls>=1.0.0rc6"
 
 ## training
 
-$ cd mmdetection
-
-$ python tools/train.py  ../configs/hubmap/custom_config.py
+$ python mmdetection/tools/train.py configs/hubmap/custom_config.py
 
 ## upload output
 
