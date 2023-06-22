@@ -25,3 +25,7 @@ $ pip install "mmcls>=1.0.0rc6"
 $ cd mmdetection
 
 $ python tools/train.py  ../configs/hubmap/custom_config.py
+
+## upload output
+
+$ kaggle datasets create --dir-mode zip -p mmdetection/work_dirs/exp012_f0
