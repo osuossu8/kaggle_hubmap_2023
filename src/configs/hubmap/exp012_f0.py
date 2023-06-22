@@ -1,16 +1,12 @@
 fold = 0
 SEED = 42
-EPOCHS = 20 # 30
+EPOCHS = 20
 NUM_CLASSES = 1
 DATA_ROOT = f'/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/'
 IMG_SIZE_HW = (768, 768)
 CLASSES = ('blood_vessel')
 
 # The new config inherits a base config to highlight the necessary modification
-# _base_ = '../mask_rcnn/mask-rcnn_r50-caffe_fpn_ms-poly-1x_coco.py'
-# _base_ = '../mask_rcnn/mask-rcnn_r50_fpn_ms-poly-3x_coco.py'
-# _base_ = '../mask_rcnn/mask-rcnn_x101-32x4d_fpn_ms-poly-3x_coco.py'
-# _base_ = '/workspace/kaggle_hubmap_2023/src/mmdetection/configs/cascade_rcnn/cascade-mask-rcnn_x101-32x4d_fpn_ms-3x_coco.py'
 _base_ = '/workspace/kaggle_hubmap_2023/src/mmdetection/configs/mask2former/mask2former_r50_8xb2-lsj-50e_coco.py'
 
 num_things_classes = NUM_CLASSES
@@ -148,7 +144,7 @@ train_cfg = dict(
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 
-LR = 5e-4
+LR = 3e-5 # 5e-4
 param_scheduler = [
     # learning rate scheduler
     # During the first 10 epochs, learning rate increases from 0 to lr * 10
@@ -189,10 +185,6 @@ param_scheduler = [
         by_epoch=True,
         convert_to_iter_based=True)
 ]
-#optim_wrapper = dict(
-#    _delete_ = True,
-#    type='OptimWrapper',
-#    optimizer=dict(type='SGD', lr=LR, momentum=0.9, weight_decay=0.0001))
  
 optim_wrapper = dict(
     _delete_ = True,
@@ -206,9 +198,5 @@ optim_wrapper = dict(
 randomness=dict(seed=SEED)
 
 # We can use the pre-trained Mask RCNN model to obtain higher performance
-# load_from = 'https://download.openmmlab.com/mmdetection/v2.0/mask_rcnn/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco_bbox_mAP-0.408__segm_mAP-0.37_20200504_163245-42aa3d00.pth'
-# load_from = 'https://download.openmmlab.com/mmdetection/v2.0/mask_rcnn/mask_rcnn_r50_fpn_mstrain-poly_3x_coco/mask_rcnn_r50_fpn_mstrain-poly_3x_coco_20210524_201154-21b550bb.pth'
-# load_from = 'https://download.openmmlab.com/mmdetection/v2.0/mask_rcnn/mask_rcnn_x101_32x4d_fpn_mstrain-poly_3x_coco/mask_rcnn_x101_32x4d_fpn_mstrain-poly_3x_coco_20210524_201410-abcd7859.pth'
-#load_from = 'https://download.openmmlab.com/mmdetection/v2.0/cascade_rcnn/cascade_mask_rcnn_x101_32x4d_fpn_mstrain_3x_coco/cascade_mask_rcnn_x101_32x4d_fpn_mstrain_3x_coco_20210706_225234-40773067.pth'
 load_from = 'https://download.openmmlab.com/mmdetection/v3.0/mask2former/mask2former_r50_8xb2-lsj-50e_coco/mask2former_r50_8xb2-lsj-50e_coco_20220506_191028-41b088b6.pth'
 
