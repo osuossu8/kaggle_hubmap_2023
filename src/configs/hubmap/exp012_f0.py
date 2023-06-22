@@ -57,7 +57,7 @@ default_hooks = dict(
         interval=1, 
         save_best='coco/segm_mAP', 
         # save_best='coco/bbox_mAP', 
-        max_keep_ckpts=3,
+        max_keep_ckpts=2,
     ),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='DetVisualizationHook'))
