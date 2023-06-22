@@ -144,7 +144,7 @@ train_cfg = dict(
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 
-LR = 3e-5 # 5e-4
+LR = 3e-6 # 3e-5 # 5e-4
 param_scheduler = [
     # learning rate scheduler
     # During the first 10 epochs, learning rate increases from 0 to lr * 10
