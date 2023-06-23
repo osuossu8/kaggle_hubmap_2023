@@ -31,7 +31,7 @@ $ pip install "mmcls>=1.0.0rc6"
 $ python mmdetection/tools/train.py configs/hubmap/custom_config.py
 ```
 
-- 5fold run (by original runner)
+- 5fold run (by original runner) and upload weights to kaggle dataset
 ```
 $ cd src
 $ python train_5fold.py configs/hubmap/exp012.py

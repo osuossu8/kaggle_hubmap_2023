@@ -1,6 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
+import json
 import logging
+import subprocess
 import os
 import os.path as osp
 
@@ -57,6 +59,21 @@ def parse_args():
         os.environ['LOCAL_RANK'] = str(args.local_rank)
 
     return args
+
+
+def write_dataset_metadata_json(cfg: Config) -> None:
+    dataset_metadata_json_path = f'./work_dirs/exp{cfg.EXP_ID}/dataset-metadata.json'
+    dataset_meta = {
+        "title": f'hubmap_2023_{cfg.EXP_ID}',
+        "id": f'kaerunantoka/hubmap-2023-{cfg.EXP_ID}',
+        "licenses": [
+            {
+                "name": "CC0-1.0"
+            }
+        ]
+    }
+    with open(dataset_metadata_json_path, "w") as outfile:
+        json.dump(dataset_meta, outfile)
 
 
 def main():
@@ -143,6 +160,11 @@ def main():
 
         # start training
         runner.train()
+
+    write_dataset_metadata_json(cfg)
+
+    kaggle_dataset_create_cmd = f"kaggle datasets create --dir-mode zip -p ./work_dirs/exp{cfg.EXP_ID}"
+    subprocess.run(kaggle_dataset_create_cmd.split())
 
 
 if __name__ == '__main__':
