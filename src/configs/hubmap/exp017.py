@@ -116,7 +116,7 @@ test_pipeline = [
 
 train_dataloader = dict(
     batch_size=1,
-    num_workers=1,
+    num_workers=2, # 1,
     dataset=dict(
         data_root=data_root,
         metainfo=metainfo,
@@ -126,7 +126,7 @@ train_dataloader = dict(
 )
 
 val_dataloader = dict(
-    num_workers=1,
+    num_workers=2, # 1,
     dataset=dict(
         data_root=data_root,
         metainfo=metainfo,
