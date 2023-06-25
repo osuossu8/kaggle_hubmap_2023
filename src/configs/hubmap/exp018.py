@@ -85,17 +85,6 @@ metainfo = {
 # https://mmdetection.readthedocs.io/en/latest/migration/config_migration.html?highlight=checkpoint
 
 # augmentation setting
-albu_train_transforms = [
-    dict(type='RandomRotate90', p=0.5),
-    dict(type='ChannelShuffle', p=0.1),
-    dict(
-        type='OneOf',
-        transforms=[
-            dict(type='Blur', blur_limit=3, p=1.0),
-            dict(type='MedianBlur', blur_limit=3, p=1.0)
-        ],
-        p=0.1),
-]
 train_pipeline = [
     dict(type='LoadImageFromFile', backend_args=None),
     dict(
@@ -105,20 +94,12 @@ train_pipeline = [
         poly2mask=False),
     dict(type='Resize', scale=IMG_SIZE_HW, keep_ratio=True),
     dict(
-        type='Albu',
-        transforms=albu_train_transforms,
-        bbox_params=dict(
-            type='BboxParams',
-            format='pascal_voc',
-            label_fields=['gt_bboxes_labels', 'gt_ignore_flags'],
-            min_visibility=0.0,
-            filter_lost_elements=True),
-        keymap={
-            'img': 'image',
-            'gt_masks': 'masks',
-            'gt_bboxes': 'bboxes'
-        },
-        skip_img_without_anno=True),
+        type='Rotate',
+        prob=0.5,
+        min_mag=90,
+        max_mag=90,
+        reversal_prob=0.5
+        ),
     dict(
         type='PhotoMetricDistortion',
         brightness_delta=32,
