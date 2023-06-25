@@ -3,14 +3,16 @@
 fold = None
 EXP_ID = '019'
 SEED = 42
-EPOCHS = 30 # 20
+EPOCHS = 20
 NUM_CLASSES = 1
-IMG_SIZE_HW = (840, 840)
+IMG_SIZE_HW = (840, 840) # (768, 768)
 CLASSES = ('blood_vessel')
 data_root = f'/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/'
 work_dir = f'./work_dirs/exp{EXP_ID}/fold{fold}'
 
 # The new config inherits a base config to highlight the necessary modification
+# _base_ = '/workspace/kaggle_hubmap_2023/src/mmdetection/configs/mask2former/mask2former_r50_8xb2-lsj-50e_coco.py'
+# _base_ = '/workspace/kaggle_hubmap_2023/src/mmdetection/configs/mask2former/mask2former_r101_8xb2-lsj-50e_coco.py'
 _base_ = '/workspace/kaggle_hubmap_2023/src/mmdetection/configs/mask2former/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco.py'
 
 num_things_classes = NUM_CLASSES
@@ -94,13 +96,6 @@ train_pipeline = [
         poly2mask=False),
     dict(type='Resize', scale=IMG_SIZE_HW, keep_ratio=True),
     dict(
-        type='Rotate',
-        prob=0.2,
-        min_mag=90.0,
-        max_mag=90.0,
-        reversal_prob=0.5
-        ),
-    dict(
         type='PhotoMetricDistortion',
         brightness_delta=32,
         contrast_range=(0.5, 1.5),
@@ -120,8 +115,8 @@ test_pipeline = [
 ]
 
 train_dataloader = dict(
-    batch_size=2,
-    num_workers=2,
+    batch_size=1,
+    num_workers=1,
     dataset=dict(
         data_root=data_root,
         metainfo=metainfo,
@@ -131,8 +126,7 @@ train_dataloader = dict(
 )
 
 val_dataloader = dict(
-    batch_size=2,
-    num_workers=2,
+    num_workers=1,
     dataset=dict(
         data_root=data_root,
         metainfo=metainfo,
@@ -162,18 +156,18 @@ param_scheduler = [
     # during the next 20 epochs, learning rate decreases from lr * 10 to lr * 1e-4
     dict(
         type='CosineAnnealingLR',
-        T_max=10,
+        T_max=8,
         eta_min=LR * 10,
         begin=0,
-        end=10,
+        end=8,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingLR',
-        T_max=20,
+        T_max=16,
         eta_min=LR * 1e-4,
-        begin=10,
-        end=30,
+        begin=8,
+        end=20,
         by_epoch=True,
         convert_to_iter_based=True),
     # momentum scheduler
@@ -181,18 +175,18 @@ param_scheduler = [
     # during the next 20 epochs, momentum increases from 0.85 / 0.95 to 1
     dict(
         type='CosineAnnealingMomentum',
-        T_max=10,
+        T_max=8,
         eta_min=0.85 / 0.95,
         begin=0,
-        end=10,
+        end=8,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingMomentum',
-        T_max=20,
+        T_max=16,
         eta_min=1,
         begin=8,
-        end=30,
+        end=20,
         by_epoch=True,
         convert_to_iter_based=True)
 ]
@@ -209,4 +203,6 @@ optim_wrapper = dict(
 randomness=dict(seed=SEED)
 
 # We can use the pre-trained Mask RCNN model to obtain higher performance
+# load_from = 'https://download.openmmlab.com/mmdetection/v3.0/mask2former/mask2former_r50_8xb2-lsj-50e_coco/mask2former_r50_8xb2-lsj-50e_coco_20220506_191028-41b088b6.pth'
+# load_from = 'https://download.openmmlab.com/mmdetection/v3.0/mask2former/mask2former_r101_8xb2-lsj-50e_coco/mask2former_r101_8xb2-lsj-50e_coco_20220426_100250-ecf181e2.pth'
 load_from = 'https://download.openmmlab.com/mmdetection/v3.0/mask2former/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco_20220508_091649-01b0f990.pth'
