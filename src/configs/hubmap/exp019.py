@@ -3,7 +3,7 @@
 fold = None
 EXP_ID = '019'
 SEED = 42
-EPOCHS = 20
+EPOCHS = 30 # 20
 NUM_CLASSES = 1
 IMG_SIZE_HW = (840, 840)
 CLASSES = ('blood_vessel')
@@ -120,8 +120,8 @@ test_pipeline = [
 ]
 
 train_dataloader = dict(
-    batch_size=1,
-    num_workers=1,
+    batch_size=2,
+    num_workers=2,
     dataset=dict(
         data_root=data_root,
         metainfo=metainfo,
@@ -131,7 +131,8 @@ train_dataloader = dict(
 )
 
 val_dataloader = dict(
-    num_workers=1,
+    batch_size=2,
+    num_workers=2,
     dataset=dict(
         data_root=data_root,
         metainfo=metainfo,
@@ -161,18 +162,18 @@ param_scheduler = [
     # during the next 20 epochs, learning rate decreases from lr * 10 to lr * 1e-4
     dict(
         type='CosineAnnealingLR',
-        T_max=8,
+        T_max=10,
         eta_min=LR * 10,
         begin=0,
-        end=8,
+        end=10,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingLR',
-        T_max=16,
+        T_max=20,
         eta_min=LR * 1e-4,
-        begin=8,
-        end=20,
+        begin=10,
+        end=30,
         by_epoch=True,
         convert_to_iter_based=True),
     # momentum scheduler
@@ -180,18 +181,18 @@ param_scheduler = [
     # during the next 20 epochs, momentum increases from 0.85 / 0.95 to 1
     dict(
         type='CosineAnnealingMomentum',
-        T_max=8,
+        T_max=10,
         eta_min=0.85 / 0.95,
         begin=0,
-        end=8,
+        end=10,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingMomentum',
-        T_max=16,
+        T_max=20,
         eta_min=1,
         begin=8,
-        end=20,
+        end=30,
         by_epoch=True,
         convert_to_iter_based=True)
 ]
