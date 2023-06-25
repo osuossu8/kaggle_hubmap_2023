@@ -96,8 +96,8 @@ train_pipeline = [
     dict(
         type='Rotate',
         prob=0.5,
-        min_mag=90,
-        max_mag=90,
+        min_mag=90.0,
+        max_mag=90.0,
         reversal_prob=0.5
         ),
     dict(
