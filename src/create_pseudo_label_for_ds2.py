@@ -178,6 +178,8 @@ for idx, (file_id, annot_dict) in tqdm(enumerate(zip(
     ens_masks = np.concatenate(ens_masks, 0)
     # print(len(ens_classes), len(ens_scores), len(ens_masks))
 
+    ens_classes, ens_scores, ens_bboxes, ens_masks = remove_score_zero_result(ens_classes, ens_scores, ens_bboxes, ens_masks)
+
     IOU_TH = 0.6
     ens_classes, ens_scores, ens_masks = nms_predictions(
             ens_classes, 
