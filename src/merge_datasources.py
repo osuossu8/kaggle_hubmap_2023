@@ -16,8 +16,8 @@ for kfold in [0,1,2,3,4]:
     data_copy_cmd1 = f'{DATA_SOURCE_1}/fold{kfold}/train/* /workspace/kaggle_hubmap_2023/input/{MERGE_DATA_SOURCE_NAME}/fold{kfold}/train/'
     data_copy_cmd2 = f'{DATA_SOURCE_2}/fold{kfold}/train/* /workspace/kaggle_hubmap_2023/input/{MERGE_DATA_SOURCE_NAME}/fold{kfold}/train/'
 
-    subprocess.run(data_copy_cmd1.split())
-    subprocess.run(data_copy_cmd2.split())
+    subprocess.run(data_copy_cmd1.split(), shell=True)
+    subprocess.run(data_copy_cmd2.split(), shell=True)
    
     anno1 = load(Path(DATA_SOURCE_1)/ f'fold{kfold}'/'train/annotation_coco.json')
     anno2 = load(Path(DATA_SOURCE_2)/ f'fold{kfold}'/'train/annotation_coco.json')
