@@ -1,5 +1,6 @@
 import os
-import subprocess
+import glob
+import shutil
 from pathlib import Path
 from mmengine.fileio import dump, load
 
@@ -7,18 +8,20 @@ pseudo_threshold = '0-9' # '0-8'
 DATA_SOURCE_1 = '/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold'
 DATA_SOURCE_2 = f'/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds2-5fold-pseudo-labeled-{pseudo_threshold}'
 
-MERGE_DATA_SOURCE_NAME = f'ds1_ds2_th_{pseudo_threshold}'
+MERGE_DATA_SOURCE_NAME = f"ds1_ds2_th_{pseudo_threshold.replace('-', '_')}"
 for kfold in [0,1,2,3,4]:
     image_prefix = f'/workspace/kaggle_hubmap_2023/input/{MERGE_DATA_SOURCE_NAME}/fold{kfold}/train'
     out_file = f'/workspace/kaggle_hubmap_2023/input/{MERGE_DATA_SOURCE_NAME}/fold{kfold}/train/annotation_coco.json'
     os.makedirs(image_prefix, exist_ok=True)
 
-    data_copy_cmd1 = f'{DATA_SOURCE_1}/fold{kfold}/train/* /workspace/kaggle_hubmap_2023/input/{MERGE_DATA_SOURCE_NAME}/fold{kfold}/train/'
-    data_copy_cmd2 = f'{DATA_SOURCE_2}/fold{kfold}/train/* /workspace/kaggle_hubmap_2023/input/{MERGE_DATA_SOURCE_NAME}/fold{kfold}/train/'
+    source_images1 = glob.glob(f"{DATA_SOURCE_1}/fold{kfold}/train/*.png")
+    source_images2 = glob.glob(f"{DATA_SOURCE_2}/fold{kfold}/train/*.png")
+    source_images = source_images1 + source_images2
+    destination_directory = f'/workspace/kaggle_hubmap_2023/input/{MERGE_DATA_SOURCE_NAME}/fold{kfold}/train/'
 
-    subprocess.run(data_copy_cmd1.split(), shell=True)
-    subprocess.run(data_copy_cmd2.split(), shell=True)
-   
+    for png_path in source_images:
+        shutil.copy(png_path, destination_directory)
+    
     anno1 = load(Path(DATA_SOURCE_1)/ f'fold{kfold}'/'train/annotation_coco.json')
     anno2 = load(Path(DATA_SOURCE_2)/ f'fold{kfold}'/'train/annotation_coco.json')
 
