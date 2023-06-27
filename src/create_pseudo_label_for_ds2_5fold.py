@@ -64,7 +64,7 @@ def get_bounding_boxes(binary_mask):
     return bounding_boxes
 
 
-pseudo_threshold = 0.8
+pseudo_threshold = 0.9 # 0.8
 data_root = Path('../input')
 
 with open(data_root / 'polygons.jsonl', 'r') as json_file:
