@@ -1,20 +1,17 @@
 # Swin-T	-	ImageNet-1K	50e	15.3	-	47.7	44.7	config	model | log
 
 fold = None
-EXP_ID = '020'
+EXP_ID = '021'
 SEED = 42
 EPOCHS = 20
 NUM_CLASSES = 1
 IMG_SIZE_HW = (768, 768)
 CLASSES = ('blood_vessel')
 data_root = f'/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/'
-# additional_data_root = f'/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds2-pseudo-labeled-0-8/fold0/'
 additional_data_root = f'/workspace/kaggle_hubmap_2023/input/ds1_ds2_th_0_8/fold{fold}/'
 work_dir = f'./work_dirs/exp{EXP_ID}/fold{fold}'
 
 # The new config inherits a base config to highlight the necessary modification
-# _base_ = '/workspace/kaggle_hubmap_2023/src/mmdetection/configs/mask2former/mask2former_r50_8xb2-lsj-50e_coco.py'
-# _base_ = '/workspace/kaggle_hubmap_2023/src/mmdetection/configs/mask2former/mask2former_r101_8xb2-lsj-50e_coco.py'
 _base_ = '/workspace/kaggle_hubmap_2023/src/mmdetection/configs/mask2former/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco.py'
 
 num_things_classes = NUM_CLASSES
@@ -206,6 +203,4 @@ optim_wrapper = dict(
 randomness=dict(seed=SEED)
 
 # We can use the pre-trained Mask RCNN model to obtain higher performance
-# load_from = 'https://download.openmmlab.com/mmdetection/v3.0/mask2former/mask2former_r50_8xb2-lsj-50e_coco/mask2former_r50_8xb2-lsj-50e_coco_20220506_191028-41b088b6.pth'
-# load_from = 'https://download.openmmlab.com/mmdetection/v3.0/mask2former/mask2former_r101_8xb2-lsj-50e_coco/mask2former_r101_8xb2-lsj-50e_coco_20220426_100250-ecf181e2.pth'
 load_from = 'https://download.openmmlab.com/mmdetection/v3.0/mask2former/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco_20220508_091649-01b0f990.pth'
