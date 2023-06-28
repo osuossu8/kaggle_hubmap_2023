@@ -29,6 +29,8 @@ $ pip install "mmcls>=1.0.0rc6"
 ```
 $ cd src
 $ python create_pseudo_label_for_ds2_5fold.py -e 021 -th 0.8
+
+$ python create_pseudo_label_for_ds3_5fold.py -e 021 -th 0.8
 ```
 
 ## training
