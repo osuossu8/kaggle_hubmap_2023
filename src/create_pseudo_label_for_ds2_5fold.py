@@ -1,21 +1,20 @@
-import numpy as np # linear algebra
-import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import argparse
-import os
-import cv2
 import glob
-import tifffile as tiff
-from PIL import Image
-from tqdm import tqdm
-from pathlib import Path, PosixPath
+import os
 import os.path as osp
-
-from sklearn.model_selection import KFold
 from dataclasses import dataclass
+from pathlib import Path, PosixPath
 from typing import List, Tuple, Union
 
+import cv2
+import numpy as np  # linear algebra
+import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
+import tifffile as tiff
+from mmdet.apis import inference_detector, init_detector
 from mmengine.fileio import dump, load
-from mmdet.apis import init_detector, inference_detector
+from PIL import Image
+from sklearn.model_selection import KFold
+from tqdm import tqdm
 
 
 @dataclass
@@ -24,12 +23,13 @@ class BaseConfig:
     num_fold: int
     group_col: str
     target_col: Union[str, List[str]]
-        
+
+
 class CFG(BaseConfig):
     seed = 42
     num_fold = 5
-    target_col = 'id'
-    
+    target_col = "id"
+
 
 def split_kfold(df: pd.DataFrame, cfg: BaseConfig) -> pd.DataFrame:
     df["kfold"] = -1
@@ -41,7 +41,9 @@ def split_kfold(df: pd.DataFrame, cfg: BaseConfig) -> pd.DataFrame:
 
 
 def binary_mask_to_coco_segmentation(binary_mask: np.ndarray) -> List[List[int]]:
-    contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contours, _ = cv2.findContours(
+        binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+    )
 
     coco_segmentation = []
     for contour in contours:
@@ -52,7 +54,9 @@ def binary_mask_to_coco_segmentation(binary_mask: np.ndarray) -> List[List[int]]
 
 
 def get_bounding_boxes(binary_mask: np.ndarray) -> List[List[int]]:
-    contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contours, _ = cv2.findContours(
+        binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
+    )
 
     bounding_boxes = []
     for contour in contours:
@@ -77,29 +81,28 @@ def add_pseudo_label_and_to_coco(
     images = []
     obj_count = 0
 
-    EXP_ID = exp_id # '015'
-    work_dir_path = f'./work_dirs/exp{EXP_ID}/fold{kfold}'
-    config_file = f'{work_dir_path}/exp{EXP_ID}.py'
-    checkpoint_file = glob.glob(f'{work_dir_path}/best_coco_segm_mAP_epoch_*.pth')[-1]
-    model = init_detector(config_file, checkpoint_file, device='cuda:0')      
-        
-    for idx, file_id in tqdm(enumerate(df['id'].values), total=len(df)):
-        tiff_array = tiff.imread(data_root / f'train/{file_id}.tif')
+    EXP_ID = exp_id  # '015'
+    work_dir_path = f"./work_dirs/exp{EXP_ID}/fold{kfold}"
+    config_file = f"{work_dir_path}/exp{EXP_ID}.py"
+    checkpoint_file = glob.glob(f"{work_dir_path}/best_coco_segm_mAP_epoch_*.pth")[-1]
+    model = init_detector(config_file, checkpoint_file, device="cuda:0")
+
+    for idx, file_id in tqdm(enumerate(df["id"].values), total=len(df)):
+        tiff_array = tiff.imread(data_root / f"train/{file_id}.tif")
         img_example = Image.fromarray(tiff_array).convert("RGB")
         img = np.array(img_example)
-        filename = f'{file_id}.png'
+        filename = f"{file_id}.png"
         img_path = osp.join(image_prefix, filename)
         cv2.imwrite(img_path, img)
 
         height, width = 512, 512
-        images.append(
-            dict(id=idx, file_name=filename, height=height, width=width))
-        
+        images.append(dict(id=idx, file_name=filename, height=height, width=width))
+
         res = inference_detector(model, img)
         pred = res.pred_instances.detach().cpu().numpy()
         pred_masks = pred.masks
         pred_scores = pred.scores.tolist()
-        
+
         for segm_binary_mask, segm_score in zip(pred_masks, pred_scores):
             if segm_score < pseudo_threshold:
                 continue
@@ -114,52 +117,58 @@ def add_pseudo_label_and_to_coco(
                 bbox=[x_min, y_min, x_max - x_min, y_max - y_min],
                 area=(x_max - x_min) * (y_max - y_min),
                 segmentation=coco_segm,
-                iscrowd=0)
+                iscrowd=0,
+            )
             annotations.append(data_anno)
             obj_count += 1
 
         coco_format_json = dict(
             images=images,
             annotations=annotations,
-            categories=[{
-                'id': 0,
-                'name': 'blood_vessel'
-            }])
+            categories=[{"id": 0, "name": "blood_vessel"}],
+        )
         dump(coco_format_json, out_file)
 
 
 def main(args) -> None:
     exp_id = args.exp_id
-    pseudo_threshold = float(args.pseudo_labeling_threshold) # 0.8
-    data_root = Path('../input')
+    pseudo_threshold = float(args.pseudo_labeling_threshold)  # 0.8
+    data_root = Path("../input")
 
-    with open(data_root / 'polygons.jsonl', 'r') as json_file:
+    with open(data_root / "polygons.jsonl", "r") as json_file:
         json_list = list(json_file)
 
     tile_meta_df = pd.read_csv(data_root / "tile_meta.csv")
     tile_meta_df = split_kfold(tile_meta_df, CFG)
 
-    df = pd.DataFrame(json_list, columns=['annot_dict'])
-    df['id'] = df['annot_dict'].map(lambda x: eval(x)['id'])
-    df = pd.merge(df, tile_meta_df, on='id', how='inner')
+    df = pd.DataFrame(json_list, columns=["annot_dict"])
+    df["id"] = df["annot_dict"].map(lambda x: eval(x)["id"])
+    df = pd.merge(df, tile_meta_df, on="id", how="inner")
     print(df.shape)
 
-    for kfold in [0,1,2,3,4]:
+    for kfold in [0, 1, 2, 3, 4]:
         train_dataset_number = 2
         dataset_number = 1
         source_wsi_number = 1
-        val_df = df.query(f"kfold == {kfold} & dataset == {dataset_number} & source_wsi == {source_wsi_number}").reset_index(drop=True)
-        train_df = df[~df['id'].isin(val_df['id'])].query(f"dataset == {train_dataset_number}").query(f"kfold != {kfold}").reset_index(drop=True)
+        val_df = df.query(
+            f"kfold == {kfold} & dataset == {dataset_number} & source_wsi == {source_wsi_number}"
+        ).reset_index(drop=True)
+        train_df = (
+            df[~df["id"].isin(val_df["id"])]
+            .query(f"dataset == {train_dataset_number}")
+            .query(f"kfold != {kfold}")
+            .reset_index(drop=True)
+        )
 
         print(train_df.shape)
-        print(train_df['source_wsi'].value_counts())
+        print(train_df["source_wsi"].value_counts())
 
         DATASET_NAME = f'hubmap-converted-to-coco-ds2-5fold-pseudo-labeled-{str(pseudo_threshold).replace(".", "-")}-by-exp{exp_id}'
-        out_file = f'../input/{DATASET_NAME}/fold{kfold}/train/annotation_coco.json'
-        image_prefix = f'../input/{DATASET_NAME}/fold{kfold}/train'
+        out_file = f"../input/{DATASET_NAME}/fold{kfold}/train/annotation_coco.json"
+        image_prefix = f"../input/{DATASET_NAME}/fold{kfold}/train"
 
         add_pseudo_label_and_to_coco(
-            data_root=data_root,    
+            data_root=data_root,
             df=train_df,
             out_file=out_file,
             image_prefix=image_prefix,
@@ -172,6 +181,12 @@ def main(args) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp-id", "-e", type=str, required=True, help="exp id")
-    parser.add_argument("--pseudo-labeling-threshold", "-th", type=str, required=True, help="pseudo labeling threshold")
+    parser.add_argument(
+        "--pseudo-labeling-threshold",
+        "-th",
+        type=str,
+        required=True,
+        help="pseudo labeling threshold",
+    )
     args = parser.parse_args()
     main(args)

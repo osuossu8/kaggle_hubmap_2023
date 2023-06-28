@@ -1,8 +1,9 @@
-import pandas as pd
-from pathlib import Path
-from sklearn.model_selection import KFold
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List, Union
+
+import pandas as pd
+from sklearn.model_selection import KFold
 
 
 @dataclass
@@ -11,12 +12,13 @@ class BaseConfig:
     num_fold: int
     group_col: str
     target_col: Union[str, List[str]]
-        
+
+
 class CFG(BaseConfig):
     seed = 42
     num_fold = 5
-    target_col = 'id'
-    
+    target_col = "id"
+
 
 def split_kfold(df: pd.DataFrame, cfg: BaseConfig) -> pd.DataFrame:
     df["kfold"] = -1
@@ -28,7 +30,7 @@ def split_kfold(df: pd.DataFrame, cfg: BaseConfig) -> pd.DataFrame:
 
 
 def main() -> None:
-    data_root = Path('../input')
+    data_root = Path("../input")
     tile_meta_df = pd.read_csv(data_root / "tile_meta.csv")
     tile_meta_df = split_kfold(tile_meta_df, CFG)
     tile_meta_df.to_csv(data_root / "tile_meta_with_5fold.csv", index=False)

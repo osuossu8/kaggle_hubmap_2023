@@ -1,0 +1,5 @@
+input/*
+src/.ipynb_checkpoints/*
+src/mmdetection/*
+src/work_dirs/*
+__pycache__
