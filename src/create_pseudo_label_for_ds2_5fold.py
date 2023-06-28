@@ -1,14 +1,13 @@
 import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import argparse
 import os
 import cv2
 import glob
-import json
 import tifffile as tiff
-import matplotlib.pyplot as plt
 from PIL import Image
 from tqdm import tqdm
-from pathlib import Path
+from pathlib import Path, PosixPath
 import os.path as osp
 
 from sklearn.model_selection import KFold
@@ -41,7 +40,7 @@ def split_kfold(df: pd.DataFrame, cfg: BaseConfig) -> pd.DataFrame:
     return df
 
 
-def binary_mask_to_coco_segmentation(binary_mask):
+def binary_mask_to_coco_segmentation(binary_mask: np.ndarray) -> List[List[int]]:
     contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     coco_segmentation = []
@@ -52,7 +51,7 @@ def binary_mask_to_coco_segmentation(binary_mask):
     return coco_segmentation
 
 
-def get_bounding_boxes(binary_mask):
+def get_bounding_boxes(binary_mask: np.ndarray) -> List[List[int]]:
     contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     bounding_boxes = []
@@ -64,43 +63,27 @@ def get_bounding_boxes(binary_mask):
     return bounding_boxes
 
 
-pseudo_threshold = 0.9 # 0.8
-data_root = Path('../input')
-
-with open(data_root / 'polygons.jsonl', 'r') as json_file:
-    json_list = list(json_file)
-
-tile_meta_df = pd.read_csv(data_root / "tile_meta.csv")
-tile_meta_df = split_kfold(tile_meta_df, CFG)
-
-df = pd.DataFrame(json_list, columns=['annot_dict'])
-df['id'] = df['annot_dict'].map(lambda x: eval(x)['id'])
-df = pd.merge(df, tile_meta_df, on='id', how='inner')
-print(df.shape)
-
-
 def add_pseudo_label_and_to_coco(
-        df: pd.DataFrame,
-        out_file: str,
-        image_prefix: str,
-        kfold: int,
-):
+    data_root: PosixPath,
+    df: pd.DataFrame,
+    out_file: str,
+    image_prefix: str,
+    kfold: int,
+    pseudo_threshold: float,
+    exp_id: str,
+) -> None:
     os.makedirs(image_prefix, exist_ok=True)
     annotations = []
     images = []
     obj_count = 0
 
-    EXP_ID = '015'
+    EXP_ID = exp_id # '015'
     work_dir_path = f'./work_dirs/exp{EXP_ID}/fold{kfold}'
     config_file = f'{work_dir_path}/exp{EXP_ID}.py'
     checkpoint_file = glob.glob(f'{work_dir_path}/best_coco_segm_mAP_epoch_*.pth')[-1]
     model = init_detector(config_file, checkpoint_file, device='cuda:0')      
         
-    for idx, (file_id, annot_dict) in tqdm(enumerate(zip(
-                df['id'].values,
-                df['annot_dict'].values,
-            )), total=len(df)):
-
+    for idx, file_id in tqdm(enumerate(df['id'].values), total=len(df)):
         tiff_array = tiff.imread(data_root / f'train/{file_id}.tif')
         img_example = Image.fromarray(tiff_array).convert("RGB")
         img = np.array(img_example)
@@ -145,25 +128,50 @@ def add_pseudo_label_and_to_coco(
         dump(coco_format_json, out_file)
 
 
-for kfold in [0,1,2,3,4]:
-    train_dataset_number = 2
-    dataset_number = 1
-    source_wsi_number = 1
-    val_df = df.query(f"kfold == {kfold} & dataset == {dataset_number} & source_wsi == {source_wsi_number}").reset_index(drop=True)
-    train_df = df[~df['id'].isin(val_df['id'])].query(f"dataset == {train_dataset_number}").query(f"kfold != {kfold}").reset_index(drop=True)
+def main(args) -> None:
+    exp_id = args.exp_id
+    pseudo_threshold = float(args.pseudo_labeling_threshold) # 0.8
+    data_root = Path('../input')
 
-    print(train_df.shape)
-    print(train_df['source_wsi'].value_counts())
+    with open(data_root / 'polygons.jsonl', 'r') as json_file:
+        json_list = list(json_file)
 
-    DATASET_NAME = f'hubmap-converted-to-coco-ds2-5fold-pseudo-labeled-{str(pseudo_threshold).replace(".", "-")}'
-    out_file = f'../input/{DATASET_NAME}/fold{kfold}/train/annotation_coco.json'
-    image_prefix = f'../input/{DATASET_NAME}/fold{kfold}/train'
+    tile_meta_df = pd.read_csv(data_root / "tile_meta.csv")
+    tile_meta_df = split_kfold(tile_meta_df, CFG)
 
-    add_pseudo_label_and_to_coco(
+    df = pd.DataFrame(json_list, columns=['annot_dict'])
+    df['id'] = df['annot_dict'].map(lambda x: eval(x)['id'])
+    df = pd.merge(df, tile_meta_df, on='id', how='inner')
+    print(df.shape)
+
+    for kfold in [0,1,2,3,4]:
+        train_dataset_number = 2
+        dataset_number = 1
+        source_wsi_number = 1
+        val_df = df.query(f"kfold == {kfold} & dataset == {dataset_number} & source_wsi == {source_wsi_number}").reset_index(drop=True)
+        train_df = df[~df['id'].isin(val_df['id'])].query(f"dataset == {train_dataset_number}").query(f"kfold != {kfold}").reset_index(drop=True)
+
+        print(train_df.shape)
+        print(train_df['source_wsi'].value_counts())
+
+        DATASET_NAME = f'hubmap-converted-to-coco-ds2-5fold-pseudo-labeled-{str(pseudo_threshold).replace(".", "-")}-by-exp{exp_id}'
+        out_file = f'../input/{DATASET_NAME}/fold{kfold}/train/annotation_coco.json'
+        image_prefix = f'../input/{DATASET_NAME}/fold{kfold}/train'
+
+        add_pseudo_label_and_to_coco(
+            data_root=data_root,    
             df=train_df,
             out_file=out_file,
             image_prefix=image_prefix,
             kfold=kfold,
-    )
+            pseudo_threshold=pseudo_threshold,
+            exp_id=exp_id,
+        )
 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--exp-id", "-e", type=str, required=True, help="exp id")
+    parser.add_argument("--pseudo-labeling-threshold", "-th", type=str, required=True, help="pseudo labeling threshold")
+    args = parser.parse_args()
+    main(args)

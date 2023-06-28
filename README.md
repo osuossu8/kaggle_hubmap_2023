@@ -24,6 +24,13 @@ $ pip install "mmdet==3.0.0"
 $ pip install "mmcls>=1.0.0rc6"
 ```
 
+## create pseudo-labeled-coco-format-data
+
+```
+$ cd src
+$ python create_pseudo_label_for_ds2_5fold.py -e 021 -th 0.8
+```
+
 ## training
 
 - default run
