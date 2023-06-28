@@ -39,7 +39,12 @@ def get_bounding_boxes(binary_mask: np.ndarray) -> List[List[int]]:
     return bounding_boxes
 
 
-def add_pseudo_label_and_to_coco(
+def generate_chunks(data_list, num_chunk):
+    for i in range(0, len(data_list), num_chunk):
+        yield data_list[i:i + num_chunk]
+
+
+def add_pseudo_label_and_to_coco_batch(
     data_root: PosixPath,
     df: pd.DataFrame,
     out_file: str,
@@ -51,48 +56,55 @@ def add_pseudo_label_and_to_coco(
     os.makedirs(image_prefix, exist_ok=True)
     annotations = []
     images = []
-    obj_count = 0
+    img_count = 0
+    annotation_conut = 0
+    height, width = 512, 512
 
     EXP_ID = exp_id # '015'
     work_dir_path = f'./work_dirs/exp{EXP_ID}/fold{kfold}'
     config_file = f'{work_dir_path}/exp{EXP_ID}.py'
     checkpoint_file = glob.glob(f'{work_dir_path}/best_coco_segm_mAP_epoch_*.pth')[-1]
     model = init_detector(config_file, checkpoint_file, device='cuda:0')      
-        
-    for idx, file_id in tqdm(enumerate(df['id'].values), total=len(df)):
-        tiff_array = tiff.imread(data_root / f'train/{file_id}.tif')
-        img_example = Image.fromarray(tiff_array).convert("RGB")
-        img = np.array(img_example)
-        filename = f'{file_id}.png'
-        img_path = osp.join(image_prefix, filename)
-        cv2.imwrite(img_path, img)
 
-        height, width = 512, 512
-        images.append(
-            dict(id=idx, file_name=filename, height=height, width=width))
-        
-        res = inference_detector(model, img)
-        pred = res.pred_instances.detach().cpu().numpy()
-        pred_masks = pred.masks
-        pred_scores = pred.scores.tolist()
-        
-        for segm_binary_mask, segm_score in zip(pred_masks, pred_scores):
-            if segm_score < pseudo_threshold:
-                continue
-            segm_binary_mask = segm_binary_mask.astype(np.uint8)
-            x_min, y_min, x_max, y_max = get_bounding_boxes(segm_binary_mask)[0]
-            coco_segm = binary_mask_to_coco_segmentation(segm_binary_mask)
+    batch_size = 16
+    batch_generator = list(generate_chunks(df, batch_size))
+    for batch in tqdm(batch_generator, total=len(batch_generator)):
+        image_np_array_list = []
+        for file_id in batch['id'].values:
+            image_np_array = np.array(
+                Image.fromarray(
+                    tiff.imread(data_root / f'train/{file_id}.tif')).convert("RGB")
+            )
+            filename = f'{file_id}.png'
+            img_path = osp.join(image_prefix, filename)
+            cv2.imwrite(img_path, image_np_array)
+            images.append(
+                dict(id=img_count, file_name=filename, height=height, width=width))
+            img_count += 1
+            image_np_array_list.append(image_np_array)
+        res = inference_detector(model, image_np_array_list)
+        preds = [r.pred_instances.detach().cpu().numpy() for r in res]
+        for pred in preds:
+            pred_masks = pred.masks
+            pred_scores = pred.scores.tolist()
+            
+            for segm_binary_mask, segm_score in zip(pred_masks, pred_scores):
+                if segm_score < pseudo_threshold:
+                    continue
+                segm_binary_mask = segm_binary_mask.astype(np.uint8)
+                x_min, y_min, x_max, y_max = get_bounding_boxes(segm_binary_mask)[0]
+                coco_segm = binary_mask_to_coco_segmentation(segm_binary_mask)
 
-            data_anno = dict(
-                image_id=idx,
-                id=obj_count,
-                category_id=0,
-                bbox=[x_min, y_min, x_max - x_min, y_max - y_min],
-                area=(x_max - x_min) * (y_max - y_min),
-                segmentation=coco_segm,
-                iscrowd=0)
-            annotations.append(data_anno)
-            obj_count += 1
+                data_anno = dict(
+                    image_id=img_count,
+                    id=annotation_conut,
+                    category_id=0,
+                    bbox=[x_min, y_min, x_max - x_min, y_max - y_min],
+                    area=(x_max - x_min) * (y_max - y_min),
+                    segmentation=coco_segm,
+                    iscrowd=0)
+                annotations.append(data_anno)
+                annotation_conut += 1
 
         coco_format_json = dict(
             images=images,
@@ -126,7 +138,7 @@ def main(args) -> None:
         out_file = f'../input/{DATASET_NAME}/fold{kfold}/train/annotation_coco.json'
         image_prefix = f'../input/{DATASET_NAME}/fold{kfold}/train'
 
-        add_pseudo_label_and_to_coco(
+        add_pseudo_label_and_to_coco_batch(
             data_root=data_root,    
             df=train_df,
             out_file=out_file,
