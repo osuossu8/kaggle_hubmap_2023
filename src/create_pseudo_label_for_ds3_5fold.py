@@ -66,7 +66,7 @@ def add_pseudo_label_and_to_coco_batch(
     checkpoint_file = glob.glob(f'{work_dir_path}/best_coco_segm_mAP_epoch_*.pth')[-1]
     model = init_detector(config_file, checkpoint_file, device='cuda:0')      
 
-    batch_size = 16
+    batch_size = 32
     batch_generator = list(generate_chunks(df, batch_size))
     for batch in tqdm(batch_generator, total=len(batch_generator)):
         image_np_array_list = []
