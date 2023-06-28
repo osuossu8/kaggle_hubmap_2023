@@ -1,10 +1,10 @@
 .PHONY: black
 black:
-	find src tests -type f -not \( -path 'src/mmdetection/*' -o -path 'src/configs/*' -o -path 'src/work_dirs/*' \) -exec poetry run black --check {} +
+	find src tests -type f -not \( -path 'src/mmdetection/*' -o -path 'src/configs/*' -o -path 'src/work_dirs/*' \) -exec poetry run black {} +
 
 .PHONY: black-check
 black-check:
-	find src tests -type f -not \( -path 'src/mmdetection/*' -o -path 'src/configs/*' -o -path 'src/work_dirs/*' \) -exec poetry run black {} +
+	find src tests -type f -not \( -path 'src/mmdetection/*' -o -path 'src/configs/*' -o -path 'src/work_dirs/*' \) -exec poetry run black --check {} +
 
 .PHONY: isort
 isort:
