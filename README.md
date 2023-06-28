@@ -70,3 +70,9 @@ python -m torch.distributed.launch \
 ```
 $ kaggle datasets create --dir-mode zip -p work_dirs/exp012
 ```
+
+## linter and formatter
+
+```
+$ make source-code-format
+```
