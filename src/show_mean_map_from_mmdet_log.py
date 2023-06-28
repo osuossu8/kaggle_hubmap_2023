@@ -23,7 +23,7 @@ def show_mean_mAP_from_log(EXP_ID: str) -> None:
     print()
 
 
-EXP_IDs = ["012", "013", "014", "015", "016"]
+EXP_IDs = ["015", "021", "024"]
 
 for EXP_ID in EXP_IDs:
     show_mean_mAP_from_log(EXP_ID)
