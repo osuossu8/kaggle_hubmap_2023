@@ -69,10 +69,11 @@ python -m torch.distributed.launch \
 
 ```
 # sungle case
-$ python show_mean_map_from_mmdet_log.py -e 027
+$ python show_mean_map_from_mmdet_log.py -e 021 -p work_dirs
+$ python show_mean_map_from_mmdet_log.py -e 015 -p /external_disk/work_dirs
 
 # multiple case
-$ python show_mean_map_from_mmdet_log.py -e '021 027'
+$ python show_mean_map_from_mmdet_log.py -e '021 027' -p work_dirs
 ```
 
 ## upload output
