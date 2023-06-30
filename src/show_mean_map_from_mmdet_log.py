@@ -16,11 +16,11 @@ def show_mean_mAP_from_log(EXP_ID: str) -> None:
     exp_maps = []
     for fold in [0, 1, 2, 3, 4]:
         log_paths = glob.glob(f"work_dirs/exp{EXP_ID}/fold{fold}/*/*.log")
-        for log_path in log_paths:
-            last_best_map, last_best_map_str = show_mAP_from_log(log_path)
-            print(f"exp{EXP_ID} fold{fold}")
-            print(last_best_map_str)
-            exp_maps.append(last_best_map)
+        last_log_path = sorted(log_paths)[-1]
+        last_best_map, last_best_map_str = show_mAP_from_log(last_log_path)
+        print(f"exp{EXP_ID} fold{fold}")
+        print(last_best_map_str)
+        exp_maps.append(last_best_map)
     print(f"*** mean mAP is {np.mean(exp_maps):4f} at exp{EXP_ID} ***")
     print()
 
