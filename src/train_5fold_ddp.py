@@ -143,16 +143,15 @@ def main():
 
     for fold in [0, 1, 2, 3, 4]:
         data_root = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/"
-        additional_data_root = (
-            f"/workspace/kaggle_hubmap_2023/input/ds1_ds2_th_0_8/fold{fold}/"
-        )
+        # data_root = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold-2class/fold{fold}/"
+        # additional_data_root = f"/workspace/kaggle_hubmap_2023/input/ds1_ds2_th_0_8_2nd_iter/fold{fold}/"
         # fold_manage_dict: these parameters should be changed if fold is changed
         fold_manage_dict = dict(
             fold=fold,
             data_root=data_root,
             work_dir=f"./work_dirs/exp{cfg.EXP_ID}/fold{fold}",
-            train_dataloader=dict(dataset=dict(data_root=additional_data_root)),
-            # train_dataloader = dict(dataset=dict(data_root=data_root)),
+            # train_dataloader=dict(dataset=dict(data_root=additional_data_root)),
+            train_dataloader = dict(dataset=dict(data_root=data_root)),
             val_dataloader=dict(dataset=dict(data_root=data_root)),
             test_dataloader=dict(dataset=dict(data_root=data_root)),
             val_evaluator=dict(ann_file=data_root + "val/annotation_coco.json"),
