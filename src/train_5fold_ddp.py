@@ -151,7 +151,7 @@ def main():
             data_root=data_root,
             work_dir=f"./work_dirs/exp{cfg.EXP_ID}/fold{fold}",
             # train_dataloader=dict(dataset=dict(data_root=additional_data_root)),
-            train_dataloader = dict(dataset=dict(data_root=data_root)),
+            train_dataloader=dict(dataset=dict(data_root=data_root)),
             val_dataloader=dict(dataset=dict(data_root=data_root)),
             test_dataloader=dict(dataset=dict(data_root=data_root)),
             val_evaluator=dict(ann_file=data_root + "val/annotation_coco.json"),

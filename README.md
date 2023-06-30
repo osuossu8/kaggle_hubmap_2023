@@ -61,8 +61,18 @@ python -m torch.distributed.launch \
     --nproc_per_node=2 \
     --master_port=$PORT \
     train_5fold_ddp.py \
-    configs/hubmap/exp017.py \
+    configs/hubmap/exp027.py \
     --launcher pytorch ${@:3}
+```
+
+## show mean mAP
+
+```
+# sungle case
+$ python show_mean_map_from_mmdet_log.py -e 027
+
+# multiple case
+$ python show_mean_map_from_mmdet_log.py -e '021 027'
 ```
 
 ## upload output
