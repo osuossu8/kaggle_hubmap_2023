@@ -14,6 +14,7 @@ from mmengine.config import Config, DictAction
 from mmengine.logging import print_log
 from mmengine.registry import RUNNERS
 from mmengine.runner import Runner
+from mmengine.runner import set_random_seed
 
 
 def parse_args():
@@ -141,9 +142,18 @@ def main():
         cfg.resume = True
         cfg.load_from = args.resume
 
+    set_random_seed(cfg.SEED)
+    import torch
+    import random
+
+    torch.manual_seed(42)
+    random.seed(42)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     for fold in [0, 1, 2, 3, 4]:
-        data_root = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/"
-        # data_root = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold-2class/fold{fold}/"
+        # data_root = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/"
+        data_root = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-5fold-v2/fold{fold}/"
         # additional_data_root = f"/workspace/kaggle_hubmap_2023/input/ds1_ds2_th_0_8_2nd_iter/fold{fold}/"
         # fold_manage_dict: these parameters should be changed if fold is changed
         fold_manage_dict = dict(

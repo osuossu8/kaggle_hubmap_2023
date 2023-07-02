@@ -43,11 +43,13 @@ $ python mmdetection/tools/train.py configs/hubmap/custom_config.py
 - 5fold run (by original runner) and upload weights to kaggle dataset
 ```
 $ cd src
-$ python train_5fold.py configs/hubmap/exp012.py
+$ python train_5fold.py configs/hubmap/exp038.py
 ```
 
 - Multi GPU run
 ```
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
+export CUBLAS_WORKSPACE_CONFIG=:16:8
 NNODES=${NNODES:-1}
 NODE_RANK=${NODE_RANK:-0}
 PORT=${PORT:-29500}
@@ -61,7 +63,7 @@ python -m torch.distributed.launch \
     --nproc_per_node=2 \
     --master_port=$PORT \
     train_5fold_ddp.py \
-    configs/hubmap/exp029.py \
+    configs/hubmap/exp038.py \
     --launcher pytorch ${@:3}
 ```
 
@@ -69,7 +71,7 @@ python -m torch.distributed.launch \
 
 ```
 # sungle case
-$ python show_mean_map_from_mmdet_log.py -e 021 -p work_dirs
+$ python show_mean_map_from_mmdet_log.py -e 039 -p work_dirs
 $ python show_mean_map_from_mmdet_log.py -e 015 -p /external_disk/work_dirs
 
 # multiple case
