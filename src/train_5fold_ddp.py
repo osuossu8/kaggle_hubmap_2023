@@ -152,9 +152,8 @@ def main():
     torch.backends.cudnn.benchmark = False
 
     for fold in [0, 1, 2, 3, 4]:
-        # DATASET_NAME = 'hubmap-converted-to-coco-5fold-v3'
-        # DATASET_NAME = 'hubmap-converted-to-coco-5fold-v4-3class'
-        DATASET_NAME = 'hubmap-converted-to-coco-ds1-ds2-5fold'
+        # DATASET_NAME = 'hubmap-converted-to-coco-ds1-ds2-5fold'
+        DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
         data_root = f'/workspace/kaggle_hubmap_2023/input/{DATASET_NAME}/fold{fold}/'
         # data_root = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/"
         # data_root = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-5fold-v2/fold{fold}/"
