@@ -1,16 +1,19 @@
 # Swin-T	-	ImageNet-1K	50e	15.3	-	47.7	44.7	config	model | log
 
-DATASET_NAME = None
-fold = 0
-EXP_ID = '043'
+DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
+fold = None
+EXP_ID = '047'
 SEED = 42
 EPOCHS = 20
-BATCH_SIZE = 2
+BATCH_SIZE = 2 # 4
 NUM_CLASSES = 3
-IMG_SIZE_HW = (840, 840) # (768, 768)
+IMG_SIZE_HW = (768, 768) # (640, 640)
 CLASSES = ('blood_vessel', 'glomerulus', 'unsure')
-data_root = f'/workspace/kaggle_hubmap_2023/input/'
-work_dir = f'./work_dirs/exp{EXP_ID}/seed{SEED}'
+# data_root = f'/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/'
+# data_root = f'/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-shuffle-5fold/fold{fold}/'
+# data_root = f'/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-5fold-v2/fold{fold}/'
+data_root = f'/workspace/kaggle_hubmap_2023/input/{DATASET_NAME}/fold{fold}/'
+work_dir = f'./work_dirs/exp{EXP_ID}/fold{fold}'
 
 # The new config inherits a base config to highlight the necessary modification
 _base_ = '/workspace/kaggle_hubmap_2023/src/mmdetection/configs/mask2former/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco.py'
@@ -115,7 +118,7 @@ train_dataloader = dict(
         data_root=data_root,
         metainfo=metainfo,
         pipeline=train_pipeline,
-        ann_file='hubmap-public-train-val/coco_annotations_train_all.json',
+        ann_file='train/annotation_coco.json',
         data_prefix=dict(img='train/'))
 )
 
@@ -126,13 +129,13 @@ val_dataloader = dict(
         data_root=data_root,
         metainfo=metainfo,
         pipeline=test_pipeline,
-        ann_file='hubmap-public-train-val/coco_annotations_valid_all.json',
-        data_prefix=dict(img='train/'))
+        ann_file='val/annotation_coco.json',
+        data_prefix=dict(img='val/'))
 )
 test_dataloader = val_dataloader
 
 # Modify metric related settings
-val_evaluator = dict(ann_file=data_root + 'hubmap-public-train-val/coco_annotations_valid_all.json')
+val_evaluator = dict(ann_file=data_root + 'val/annotation_coco.json')
 test_evaluator = val_evaluator
 
 train_cfg = dict(
