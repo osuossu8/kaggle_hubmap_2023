@@ -73,6 +73,7 @@ def add_pseudo_label_and_to_coco_batch(
     batch_generator = list(generate_chunks(df, batch_size))
     for batch in tqdm(batch_generator, total=len(batch_generator)):
         image_np_array_list = []
+        image_count_list = []
         for file_id in batch["id"].values:
             image_np_array = np.array(
                 Image.fromarray(
@@ -85,11 +86,12 @@ def add_pseudo_label_and_to_coco_batch(
             images.append(
                 dict(id=img_count, file_name=filename, height=height, width=width)
             )
+            image_count_list.append(img_count)
             img_count += 1
             image_np_array_list.append(image_np_array)
         res = inference_detector(model, image_np_array_list)
         preds = [r.pred_instances.detach().cpu().numpy() for r in res]
-        for pred in preds:
+        for image_count, pred in zip(image_count_list, preds):
             pred_masks = pred.masks
             pred_scores = pred.scores.tolist()
             pred_labels = pred.labels.tolist()
@@ -102,7 +104,7 @@ def add_pseudo_label_and_to_coco_batch(
                 coco_segm = binary_mask_to_coco_segmentation(segm_binary_mask)
 
                 data_anno = dict(
-                    image_id=img_count,
+                    image_id=image_count,
                     id=annotation_conut,
                     category_id=segm_label,
                     bbox=[x_min, y_min, x_max - x_min, y_max - y_min],
