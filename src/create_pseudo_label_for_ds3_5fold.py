@@ -92,8 +92,9 @@ def add_pseudo_label_and_to_coco_batch(
         for pred in preds:
             pred_masks = pred.masks
             pred_scores = pred.scores.tolist()
+            pred_labels = pred.labels.tolist()
 
-            for segm_binary_mask, segm_score in zip(pred_masks, pred_scores):
+            for segm_binary_mask, segm_score, segm_label in zip(pred_masks, pred_scores, pred_labels):
                 if segm_score < pseudo_threshold:
                     continue
                 segm_binary_mask = segm_binary_mask.astype(np.uint8)
@@ -103,7 +104,7 @@ def add_pseudo_label_and_to_coco_batch(
                 data_anno = dict(
                     image_id=img_count,
                     id=annotation_conut,
-                    category_id=0,
+                    category_id=segm_label,
                     bbox=[x_min, y_min, x_max - x_min, y_max - y_min],
                     area=(x_max - x_min) * (y_max - y_min),
                     segmentation=coco_segm,
@@ -115,7 +116,20 @@ def add_pseudo_label_and_to_coco_batch(
         coco_format_json = dict(
             images=images,
             annotations=annotations,
-            categories=[{"id": 0, "name": "blood_vessel"}],
+            categories=[
+                {
+                    'id': 0,
+                    'name': 'blood_vessel'
+                },
+                {
+                    'id': 1,
+                    'name': 'glomerulus'
+                },
+                {
+                    'id': 2,
+                    'name': 'unsure'
+                }
+            ],
         )
         dump(coco_format_json, out_file)
 
@@ -138,7 +152,7 @@ def main(args) -> None:
         print(train_df["dataset"].value_counts())
         print(train_df["source_wsi"].value_counts())
 
-        DATASET_NAME = f'hubmap-converted-to-coco-ds3-5fold-pseudo-labeled-{str(pseudo_threshold).replace(".", "-")}-by-exp{exp_id}'
+        DATASET_NAME = f'hubmap-coco-ds3-5fold-pseudo-labeled-{str(pseudo_threshold).replace(".", "-")}-by-exp{exp_id}'
         out_file = f"../input/{DATASET_NAME}/fold{kfold}/train/annotation_coco.json"
         image_prefix = f"../input/{DATASET_NAME}/fold{kfold}/train"
 
