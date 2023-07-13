@@ -1,7 +1,8 @@
 # Swin-T	-	ImageNet-1K	50e	15.3	-	47.7	44.7	config	model | log
-DATASET_NAME = 'hubmap-coco-ds3-5fold-pseudo-labeled-0-9-by-exp062'
+
+DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
 fold = None
-EXP_ID = '066'
+EXP_ID = '068'
 SEED = 42
 EPOCHS = 20
 BATCH_SIZE = 2

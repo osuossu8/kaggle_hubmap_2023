@@ -1,5 +1,5 @@
 # Swin-T	-	ImageNet-1K	50e	15.3	-	47.7	44.7	config	model | log
-
+TRAIN_DATASET_NAME = 'merge_with_ds3_v1_th09_by062'
 DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
 fold = None
 EXP_ID = '067'
