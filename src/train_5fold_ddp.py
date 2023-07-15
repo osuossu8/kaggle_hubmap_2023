@@ -154,24 +154,21 @@ def main():
     for fold in [0, 1, 2, 3, 4]:
         # if fold != 0:
         #     continue
-
-        # checkpoint_file = glob.glob(f'/workspace/kaggle_hubmap_2023/src/work_dirs/exp047/fold{fold}/best_coco_segm_mAP_epoch_*.pth')[-1]
-        TRAIN_DATASET_NAME = 'merge_with_ds3_v1_th09_by062'
-        # TRAIN_DATASET_NAME = 'hubmap-coco-ds2wsi12-5fold-pl-th08-by047'
+        checkpoint_file = glob.glob(f'/external_disk/work_dirs/exp066/fold{fold}/best_coco_segm_mAP_epoch_*.pth')[-1]
+        # TRAIN_DATASET_NAME = 'merge_with_ds3_v1_th09_by062'
         # TRAIN_DATASET_NAME = 'hubmap-coco-ds3-5fold-pseudo-labeled-0-9-by-exp062'
+        TRAIN_DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
+        # TRAIN_DATASET_NAME = 'merge_with_ds3_v1_th09_by068'
         train_data_root = f'/workspace/kaggle_hubmap_2023/input/{TRAIN_DATASET_NAME}/fold{fold}/'
         DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
         data_root = f'/workspace/kaggle_hubmap_2023/input/{DATASET_NAME}/fold{fold}/'
-        # DATASET_NAME = 'hubmap-converted-to-coco-train-val-3class'
-        # data_root = f'/workspace/kaggle_hubmap_2023/input/{DATASET_NAME}/'
         # fold_manage_dict: these parameters should be changed if fold is changed
         fold_manage_dict = dict(
-            # load_from=checkpoint_file,
+            load_from=checkpoint_file,
             fold=fold,
             data_root=data_root,
             work_dir=f"./work_dirs/exp{cfg.EXP_ID}/fold{fold}",
             train_dataloader=dict(dataset=dict(data_root=train_data_root)),
-            # train_dataloader=dict(dataset=dict(data_root=data_root)),
             val_dataloader=dict(dataset=dict(data_root=data_root)),
             test_dataloader=dict(dataset=dict(data_root=data_root)),
             val_evaluator=dict(ann_file=data_root + "val/annotation_coco.json"),

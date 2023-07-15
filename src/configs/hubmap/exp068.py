@@ -216,3 +216,4 @@ randomness=dict(seed=SEED)
 
 # We can use the pre-trained Mask RCNN model to obtain higher performance
 load_from = 'https://download.openmmlab.com/mmdetection/v3.0/mask2former/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco_20220508_091649-01b0f990.pth'
+# checkpoint_file = glob.glob(f'/workspace/kaggle_hubmap_2023/src/work_dirs/exp066/fold{fold}/best_coco_segm_mAP_epoch_*.pth')[-1]
