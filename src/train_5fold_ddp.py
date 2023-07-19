@@ -157,11 +157,11 @@ def main():
         # checkpoint_file = glob.glob(f'/external_disk/work_dirs/exp066/fold{fold}/best_coco_segm_mAP_epoch_*.pth')[-1]
         # TRAIN_DATASET_NAME = 'merge_with_ds3_v1_th09_by062'
         # TRAIN_DATASET_NAME = 'hubmap-coco-ds3-5fold-pseudo-labeled-0-9-by-exp062'
-        # TRAIN_DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
-        # TRAIN_DATASET_NAME = 'hubmap-coco-ds3-5fold-pl-0-9-dilate-by-exp062'
-        TRAIN_DATASET_NAME = 'hubmap-converted-to-coco-5fold-v3'
+        TRAIN_DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
+        # TRAIN_DATASET_NAME = 'hubmap-converted-to-coco-5fold-v3-3class'
         train_data_root = f'/workspace/kaggle_hubmap_2023/input/{TRAIN_DATASET_NAME}/fold{fold}/'
         DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
+        # DATASET_NAME = 'hubmap-converted-to-coco-5fold-v3-3class'
         data_root = f'/workspace/kaggle_hubmap_2023/input/{DATASET_NAME}/fold{fold}/'
         # fold_manage_dict: these parameters should be changed if fold is changed
         fold_manage_dict = dict(
