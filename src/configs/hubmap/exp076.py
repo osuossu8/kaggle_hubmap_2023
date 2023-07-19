@@ -1,13 +1,13 @@
 # Swin-T	-	ImageNet-1K	50e	15.3	-	47.7	44.7	config	model | log
 
-DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
+DATASET_NAME = 'hubmap-converted-to-coco-5fold-v3'
 fold = None
-EXP_ID = '073'
+EXP_ID = '076'
 SEED = 42
-EPOCHS = 30
-BATCH_SIZE = 2
-NUM_CLASSES = 3
-IMG_SIZE_HW = (1024, 1024) # (768, 768) # (640, 640)
+EPOCHS = 20
+BATCH_SIZE = 4 # 2
+NUM_CLASSES = 1 # 3
+IMG_SIZE_HW = (768, 768) # (1024, 1024)
 CLASSES = ('blood_vessel', 'glomerulus', 'unsure')
 data_root = f'/workspace/kaggle_hubmap_2023/input/{DATASET_NAME}/fold{fold}/'
 work_dir = f'./work_dirs/exp{EXP_ID}/fold{fold}'
@@ -80,7 +80,7 @@ dataset_type = 'CocoDataset'
 metainfo = {
     'classes': CLASSES,
     'palette': [
-        (220, 20, 60), (230, 30, 70), (210, 10, 50),
+        (220, 20, 60), # (230, 30, 70), (210, 10, 50),
     ]
 }
 
@@ -93,6 +93,7 @@ train_pipeline = [
         to_float32=True,
         backend_args={{_base_.backend_args}}),
     dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
+    dict(type='RandomFlip', prob=0.5, direction=['horizontal', 'vertical']),
     # large scale jittering
     dict(
         type='RandomResize',
@@ -106,8 +107,6 @@ train_pipeline = [
         crop_type='absolute',
         recompute_bbox=True,
         allow_negative_crop=True),
-    dict(type='YOLOXHSVRandomAug'),
-    dict(type='RandomFlip', prob=0.5, direction=['horizontal', 'vertical']),
     dict(type='FilterAnnotations', min_gt_bbox_wh=(1e-5, 1e-5), by_mask=True),
     dict(type='PackDetInputs')
 ]
@@ -169,18 +168,18 @@ param_scheduler = [
     # during the next 20 epochs, learning rate decreases from lr * 10 to lr * 1e-4
     dict(
         type='CosineAnnealingLR',
-        T_max=10,
+        T_max=8,
         eta_min=LR * 10,
         begin=0,
-        end=10,
+        end=8,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingLR',
-        T_max=20,
+        T_max=16,
         eta_min=LR * 1e-4,
-        begin=10,
-        end=30,
+        begin=8,
+        end=20,
         by_epoch=True,
         convert_to_iter_based=True),
     # momentum scheduler
@@ -188,18 +187,18 @@ param_scheduler = [
     # during the next 20 epochs, momentum increases from 0.85 / 0.95 to 1
     dict(
         type='CosineAnnealingMomentum',
-        T_max=10,
+        T_max=8,
         eta_min=0.85 / 0.95,
         begin=0,
-        end=10,
+        end=8,
         by_epoch=True,
         convert_to_iter_based=True),
     dict(
         type='CosineAnnealingMomentum',
-        T_max=20,
+        T_max=16,
         eta_min=1,
-        begin=10,
-        end=30,
+        begin=8,
+        end=20,
         by_epoch=True,
         convert_to_iter_based=True)
 ]
@@ -217,4 +216,3 @@ randomness=dict(seed=SEED)
 
 # We can use the pre-trained Mask RCNN model to obtain higher performance
 load_from = 'https://download.openmmlab.com/mmdetection/v3.0/mask2former/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco/mask2former_swin-t-p4-w7-224_8xb2-lsj-50e_coco_20220508_091649-01b0f990.pth'
-# checkpoint_file = glob.glob(f'/workspace/kaggle_hubmap_2023/src/work_dirs/exp066/fold{fold}/best_coco_segm_mAP_epoch_*.pth')[-1]
