@@ -10,16 +10,16 @@ $ unzip hubmap-converted-to-coco-ds1-5fold.zip -d hubmap-converted-to-coco-ds1-5
 $ rm hubmap-converted-to-coco-ds1-5fold.zip
 ```
 
-## setup mmdet 3.0.0
+## setup mmdet 2.26.0
 
 ```
-$ pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
+$ pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
 
-$ pip install mmcv==2.0.0rc4 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.12/index.html
+$ pip install mmcv-full==1.4.8 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.11.0/index.html
 
-$ git clone https://github.com/open-mmlab/mmdetection.git
+$ git clone -b v2.26.0 https://github.com/open-mmlab/mmdetection.git
 
-$ pip install "mmdet==3.0.0"
+$ pip install "mmdet==2.26.0"
 
 $ pip install "mmcls>=1.0.0rc6"
 ```
