@@ -1,7 +1,7 @@
 
 DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
 fold = None
-EXP_ID = '084'
+EXP_ID = '085'
 total_epochs = 20
 seed = 42
 classes = ('blood_vessel', 'glomerulus', 'unsure')
@@ -175,7 +175,7 @@ evaluation = dict(
     interval=1,
     metric=['segm', 'bbox'],
     dynamic_intervals=[(365001, 368750)],
-    save_best='auto',
+    save_best='segm_mAP',
     classwise=True)
 checkpoint_config = dict(
     interval=1, by_epoch=True, save_last=False, max_keep_ckpts=1)

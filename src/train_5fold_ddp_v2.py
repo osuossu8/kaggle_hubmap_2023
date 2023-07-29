@@ -187,56 +187,17 @@ def main():
         # re-set gpu_ids with distributed training mode
         _, world_size = get_dist_info()
         cfg.gpu_ids = range(world_size)
-
-    # create work_dir
-    mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
-    # dump config
-    cfg.dump(osp.join(cfg.work_dir, osp.basename(args.config)))
-    # init the logger before other steps
-    timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
-    log_file = osp.join(cfg.work_dir, f'{timestamp}.log')
-    logger = get_root_logger(log_file=log_file, log_level=cfg.log_level)
-
-    # init the meta dict to record some important information such as
-    # environment info and seed, which will be logged
-    meta = dict()
-    # log env info
-    env_info_dict = collect_env()
-    env_info = '\n'.join([(f'{k}: {v}') for k, v in env_info_dict.items()])
-    dash_line = '-' * 60 + '\n'
-    logger.info('Environment info:\n' + dash_line + env_info + '\n' +
-                dash_line)
-    meta['env_info'] = env_info
-    meta['config'] = cfg.pretty_text
-    # log some basic info
-    logger.info(f'Distributed training: {distributed}')
-    logger.info(f'Config:\n{cfg.pretty_text}')
-
-    cfg.device = get_device()
-    # set random seeds
-    seed = init_random_seed(args.seed, device=cfg.device)
-    seed = seed + dist.get_rank() if args.diff_seed else seed
-    logger.info(f'Set random seed to {seed}, '
-                f'deterministic: {args.deterministic}')
-    set_random_seed(seed, deterministic=args.deterministic)
-    cfg.seed = seed
-    meta['seed'] = seed
-    meta['exp_name'] = osp.basename(args.config)
-
-    model = build_detector(
-        cfg.model,
-        train_cfg=cfg.get('train_cfg'),
-        test_cfg=cfg.get('test_cfg'))
-    model.init_weights()
+        
 
     for fold in [0, 1, 2, 3, 4]:
-        if fold != 0:
-            continue
+        # if fold == 0:
+        #     continue
         DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
         data_root = f'/workspace/kaggle_hubmap_2023/input/{DATASET_NAME}/fold{fold}/'
-
-        cfg.fold=fold,
-        cfg.data_root=data_root,
+        
+        cfg.runner.max_epochs = cfg.total_epochs
+        cfg.fold=fold
+        cfg.data_root=data_root
         cfg.work_dir=f"./work_dirs/exp{cfg.EXP_ID}/fold{fold}"
         cfg.data.train.ann_file = data_root + '/' + 'train/annotation_coco.json'
         cfg.data.train.img_prefix = data_root + '/' + 'train/'
@@ -244,6 +205,48 @@ def main():
         cfg.data.val.img_prefix = data_root + '/' + 'val/'
         cfg.data.test.ann_file = data_root + '/' + 'val/annotation_coco.json'
         cfg.data.test.img_prefix = data_root + '/' + 'val/'
+
+        # create work_dir
+        mmcv.mkdir_or_exist(osp.abspath(cfg.work_dir))
+        # dump config
+        cfg.dump(osp.join(cfg.work_dir, osp.basename(args.config)))
+        # init the logger before other steps
+        timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+        log_file = osp.join(cfg.work_dir, f'{timestamp}.log')
+        logger = get_root_logger(log_file=log_file, log_level=cfg.log_level)
+
+        # init the meta dict to record some important information such as
+        # environment info and seed, which will be logged
+        meta = dict()
+        # log env info
+        env_info_dict = collect_env()
+        env_info = '\n'.join([(f'{k}: {v}') for k, v in env_info_dict.items()])
+        dash_line = '-' * 60 + '\n'
+        logger.info('Environment info:\n' + dash_line + env_info + '\n' +
+                    dash_line)
+        meta['env_info'] = env_info
+        meta['config'] = cfg.pretty_text
+        # log some basic info
+        logger.info(f'Distributed training: {distributed}')
+        logger.info(f'Config:\n{cfg.pretty_text}')
+
+        cfg.device = get_device()
+        # set random seeds
+        seed = init_random_seed(args.seed, device=cfg.device)
+        seed = seed + dist.get_rank() if args.diff_seed else seed
+        logger.info(f'Set random seed to {seed}, '
+                    f'deterministic: {args.deterministic}')
+        set_random_seed(seed, deterministic=args.deterministic)
+        cfg.seed = seed
+        meta['seed'] = seed
+        meta['exp_name'] = osp.basename(args.config)
+
+        model = build_detector(
+            cfg.model,
+            train_cfg=cfg.get('train_cfg'),
+            test_cfg=cfg.get('test_cfg'))
+        model.init_weights()
+
 
         datasets = [build_dataset(cfg.data.train)]
         if len(cfg.workflow) == 2:

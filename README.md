@@ -62,8 +62,8 @@ python -m torch.distributed.launch \
     --master_addr=$MASTER_ADDR \
     --nproc_per_node=2 \
     --master_port=$PORT \
-    train_5fold_ddp.py \
-    configs/hubmap/exp038.py \
+    train_5fold_ddp_v2.py \
+    configs/hubmap/exp085.py \
     --launcher pytorch ${@:3}
 ```
 
