@@ -15,6 +15,14 @@ from PIL import Image
 from tqdm import tqdm
 
 
+def dilate_predict_mask(out_mask):
+    iterations = 3
+    # from https://www.kaggle.com/code/hengck23/lb4-09-baseline-yolov7
+    kernel = np.ones(shape=(3, 3), dtype=np.uint8)
+    out_mask = cv2.dilate(out_mask, kernel, iterations)
+    return out_mask
+
+
 def binary_mask_to_coco_segmentation(binary_mask: np.ndarray) -> List[List[int]]:
     contours, _ = cv2.findContours(
         binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
@@ -55,6 +63,7 @@ def add_pseudo_label_and_to_coco_batch(
     kfold: int,
     pseudo_threshold: float,
     exp_id: str,
+    is_dilate: bool = False,
 ) -> None:
     os.makedirs(image_prefix, exist_ok=True)
     annotations = []
@@ -64,7 +73,8 @@ def add_pseudo_label_and_to_coco_batch(
     height, width = 512, 512
 
     EXP_ID = exp_id  # '015'
-    work_dir_path = f"./work_dirs/exp{EXP_ID}/fold{kfold}"
+    # work_dir_path = f"./work_dirs/exp{EXP_ID}/fold{kfold}"
+    work_dir_path = f"/external_disk/work_dirs/exp{EXP_ID}/fold{kfold}"
     config_file = f"{work_dir_path}/exp{EXP_ID}.py"
     checkpoint_file = glob.glob(f"{work_dir_path}/best_coco_segm_mAP_epoch_*.pth")[-1]
     model = init_detector(config_file, checkpoint_file, device="cuda:0")
@@ -100,6 +110,8 @@ def add_pseudo_label_and_to_coco_batch(
                 if segm_score < pseudo_threshold:
                     continue
                 segm_binary_mask = segm_binary_mask.astype(np.uint8)
+                if is_dilate:
+                    segm_binary_mask = dilate_predict_mask(segm_binary_mask)
                 x_min, y_min, x_max, y_max = get_bounding_boxes(segm_binary_mask)[0]
                 coco_segm = binary_mask_to_coco_segmentation(segm_binary_mask)
 
@@ -139,6 +151,7 @@ def add_pseudo_label_and_to_coco_batch(
 def main(args) -> None:
     exp_id = args.exp_id
     pseudo_threshold = float(args.pseudo_labeling_threshold)  # 0.8
+    is_dilate = args.is_dilate
     data_root = Path("../input")
 
     train_dataset_number = 3
@@ -166,6 +179,7 @@ def main(args) -> None:
             kfold=kfold,
             pseudo_threshold=pseudo_threshold,
             exp_id=exp_id,
+            is_dilate=is_dilate,
         )
 
 
@@ -179,5 +193,6 @@ if __name__ == "__main__":
         required=True,
         help="pseudo labeling threshold",
     )
+    parser.add_argument("--is-dilate", "-dl", type=bool, required=False, help="dilation")
     args = parser.parse_args()
     main(args)

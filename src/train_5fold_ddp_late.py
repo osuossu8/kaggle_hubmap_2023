@@ -67,27 +67,8 @@ def parse_args():
     return args
 
 
-def show_mAP_from_log(log_path: str) -> Tuple[float, str]:
-    log_file = list(open(log_path))
-    last_best_map_str = [ll for ll in log_file if "best_coco_segm_mAP_epoch" in ll][-1]
-    last_best_map = float(last_best_map_str.split()[11])
-    return last_best_map, last_best_map_str
-
-
-def show_mean_mAP_from_log(EXP_ID: str) -> None:
-    exp_maps = []
-    exp_log_paths = glob.glob(f"work_dirs/exp{EXP_ID}/fold*/*/*.log")
-    for log_path in exp_log_paths:
-        last_best_map, last_best_map_str = show_mAP_from_log(log_path)
-        print(EXP_ID, log_path.split("/")[4])
-        print(last_best_map_str)
-        exp_maps.append(last_best_map)
-    print(f"*** mean mAP is {np.mean(exp_maps):4f} at exp{EXP_ID} ***")
-    print()
-
-
 def write_dataset_metadata_json(cfg: Config) -> None:
-    dataset_metadata_json_path = f"./work_dirs/exp{cfg.EXP_ID}/dataset-metadata.json"
+    dataset_metadata_json_path = f"./work_dirs/{cfg.EXP_ID}/dataset-metadata.json"
     dataset_meta = {
         "title": f"hubmap_2023_{cfg.EXP_ID}",
         "id": f"kaerunantoka/hubmap-2023-{cfg.EXP_ID}",
@@ -165,19 +146,28 @@ def main():
     import torch
     import random
 
-    torch.manual_seed(42)
-    random.seed(42)
+    torch.manual_seed(cfg.SEED) # 42
+    random.seed(cfg.SEED) # 42
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
     for fold in [0, 1, 2, 3, 4]:
-        data_root = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-ds1-5fold/fold{fold}/"
+        # if fold != 0:
+        #     continue
+        # checkpoint_file = glob.glob(f'/external_disk/work_dirs/exp066/fold{fold}/best_coco_segm_mAP_epoch_*.pth')[-1]
+        # TRAIN_DATASET_NAME = cfg.DATASET_NAME
+        TRAIN_DATASET_NAME = cfg.TRAIN_DATASET_NAME
+        train_data_root = f'/workspace/kaggle_hubmap_2023/input/{TRAIN_DATASET_NAME}/fold{fold}/'
+        VAL_DATASET_NAME = cfg.DATASET_NAME
+        data_root = f'/workspace/kaggle_hubmap_2023/input/{VAL_DATASET_NAME}/fold{fold}/'
         # fold_manage_dict: these parameters should be changed if fold is changed
         fold_manage_dict = dict(
+            # load_from=checkpoint_file,
             fold=fold,
             data_root=data_root,
-            work_dir=f"./work_dirs/exp{cfg.EXP_ID}/fold{fold}",
-            train_dataloader=dict(dataset=dict(data_root=data_root)),
+            work_dir=f"./work_dirs/{cfg.EXP_ID}/fold{fold}",
+            # train_dataloader=dict(dataset=dict(data_root=train_data_root)),
+            train_dataloader=dict(dataset=dict(dataset=dict(data_root=train_data_root))),
             val_dataloader=dict(dataset=dict(data_root=data_root)),
             test_dataloader=dict(dataset=dict(data_root=data_root)),
             val_evaluator=dict(ann_file=data_root + "val/annotation_coco.json"),
@@ -198,15 +188,15 @@ def main():
         # start training
         runner.train()
 
-    show_mean_mAP_from_log(cfg.EXP_ID)
+    return cfg
+
+
+if __name__ == "__main__":
+    cfg = main()
 
     write_dataset_metadata_json(cfg)
 
     kaggle_dataset_create_cmd = (
-        f"kaggle datasets create --dir-mode zip -p ./work_dirs/exp{cfg.EXP_ID}"
+        f"kaggle datasets create --dir-mode zip -p ./work_dirs/{cfg.EXP_ID}"
     )
     subprocess.run(kaggle_dataset_create_cmd.split())
-
-
-if __name__ == "__main__":
-    main()

@@ -30,7 +30,9 @@ $ pip install "mmcls>=1.0.0rc6"
 $ cd src
 $ python create_pseudo_label_for_ds2_5fold.py -e 021 -th 0.8
 
-$ python create_pseudo_label_for_ds3_5fold.py -e 021 -th 0.8
+$ python create_pseudo_label_for_ds3_5fold.py -e 062 -th 0.9 -dl True
+
+$ python create_pseudo_label_for_ds2_5fold_late.py -e late001 -th 0.8
 ```
 
 ## training
@@ -48,8 +50,6 @@ $ python train_5fold.py configs/hubmap/exp038.py
 
 - Multi GPU run
 ```
-export CUBLAS_WORKSPACE_CONFIG=:4096:8
-export CUBLAS_WORKSPACE_CONFIG=:16:8
 NNODES=${NNODES:-1}
 NODE_RANK=${NODE_RANK:-0}
 PORT=${PORT:-29500}
@@ -62,26 +62,29 @@ python -m torch.distributed.launch \
     --master_addr=$MASTER_ADDR \
     --nproc_per_node=2 \
     --master_port=$PORT \
-    train_5fold_ddp.py \
-    configs/hubmap/exp038.py \
+    train_5fold_ddp_late.py \
+    configs/hubmap/late007.py \
     --launcher pytorch ${@:3}
 ```
 
 ## show mean mAP
 
 ```
-# sungle case
-$ python show_mean_map_from_mmdet_log.py -e 039 -p work_dirs
-$ python show_mean_map_from_mmdet_log.py -e 015 -p /external_disk/work_dirs
+# single case
+$ python show_mean_map_from_mmdet_log.py -e exp074 -p work_dirs
+$ python show_mean_map_from_mmdet_log.py -e exp078 -p /external_disk/work_dirs
+$ python show_mean_map_from_mmdet_log.py -e late001 -p work_dirs
 
 # multiple case
-$ python show_mean_map_from_mmdet_log.py -e '021 027' -p work_dirs
+$ python show_mean_map_from_mmdet_log.py -e 'exp021 exp027' -p work_dirs
 ```
 
 ## upload output
 
 ```
-$ kaggle datasets create --dir-mode zip -p work_dirs/exp012
+$ kaggle datasets create --dir-mode zip -p /external_disk/work_dirs/exp021
+
+$ kaggle datasets version --dir-mode zip -p /external_disk/work_dirs/exp065 -m "reduce pth"
 ```
 
 ## linter and formatter

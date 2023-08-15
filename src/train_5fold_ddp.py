@@ -70,8 +70,8 @@ def parse_args():
 def write_dataset_metadata_json(cfg: Config) -> None:
     dataset_metadata_json_path = f"./work_dirs/exp{cfg.EXP_ID}/dataset-metadata.json"
     dataset_meta = {
-        "title": f"hubmap_2023_{cfg.EXP_ID}",
-        "id": f"kaerunantoka/hubmap-2023-{cfg.EXP_ID}",
+        "title": f"hubmap_2023_exp{cfg.EXP_ID}",
+        "id": f"kaerunantoka/hubmap-2023-exp{cfg.EXP_ID}",
         "licenses": [{"name": "CC0-1.0"}],
     }
     with open(dataset_metadata_json_path, "w") as outfile:
@@ -146,8 +146,8 @@ def main():
     import torch
     import random
 
-    torch.manual_seed(42)
-    random.seed(42)
+    torch.manual_seed(cfg.SEED) # 42
+    random.seed(cfg.SEED) # 42
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -155,20 +155,16 @@ def main():
         # if fold != 0:
         #     continue
         # checkpoint_file = glob.glob(f'/external_disk/work_dirs/exp066/fold{fold}/best_coco_segm_mAP_epoch_*.pth')[-1]
-        # TRAIN_DATASET_NAME = 'merge_with_ds3_v1_th09_by062'
-        # TRAIN_DATASET_NAME = 'hubmap-coco-ds3-5fold-pseudo-labeled-0-9-by-exp062'
-        TRAIN_DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
-        # TRAIN_DATASET_NAME = 'hubmap-converted-to-coco-5fold-v3-3class'
+        TRAIN_DATASET_NAME = cfg.DATASET_NAME
         train_data_root = f'/workspace/kaggle_hubmap_2023/input/{TRAIN_DATASET_NAME}/fold{fold}/'
-        DATASET_NAME = 'hubmap-converted-to-coco-5fold-v2-3class'
-        # DATASET_NAME = 'hubmap-converted-to-coco-5fold-v3-3class'
-        data_root = f'/workspace/kaggle_hubmap_2023/input/{DATASET_NAME}/fold{fold}/'
+        VAL_DATASET_NAME = cfg.DATASET_NAME
+        data_root = f'/workspace/kaggle_hubmap_2023/input/{VAL_DATASET_NAME}/fold{fold}/'
         # fold_manage_dict: these parameters should be changed if fold is changed
         fold_manage_dict = dict(
             # load_from=checkpoint_file,
             fold=fold,
             data_root=data_root,
-            work_dir=f"./work_dirs/exp{cfg.EXP_ID}/fold{fold}",
+            work_dir=f"./work_dirs/late{cfg.EXP_ID}/fold{fold}",
             train_dataloader=dict(dataset=dict(data_root=train_data_root)),
             # train_dataloader=dict(dataset=dict(dataset=dict(data_root=train_data_root))),
             val_dataloader=dict(dataset=dict(data_root=data_root)),

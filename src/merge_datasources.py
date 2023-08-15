@@ -9,12 +9,15 @@ EXP_ID = "late001" # "062"
 pseudo_threshold = "08"
 # DATA_SOURCE_1 = "/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-5fold-v2-3class"
 # DATA_SOURCE_2 = f"/workspace/kaggle_hubmap_2023/input/hubmap-coco-ds3-5fold-pl-0-9-dilate-by-exp{EXP_ID}"
-DATA_SOURCE_1 = "/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-5fold-ds1"
-DATA_SOURCE_2 = f"/workspace/kaggle_hubmap_2023/input/hubmap-coco-ds2-5fold-pseudo-labeled-0-8-by-{EXP_ID}"
+# DATA_SOURCE_1 = "/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-5fold-ds1"
+# DATA_SOURCE_2 = f"/workspace/kaggle_hubmap_2023/input/hubmap-coco-ds2-5fold-pseudo-labeled-0-8-by-{EXP_ID}"
+DATA_SOURCE_1 = "/workspace/kaggle_hubmap_2023/input/merge_with_ds2_late_th08_bylate001"
+DATA_SOURCE_2 = f"/workspace/kaggle_hubmap_2023/input/hubmap-converted-to-coco-5fold-ds2"
 
 
 
-MERGE_DATA_SOURCE_NAME = f"merge_with_ds2_late_th{pseudo_threshold}_by{EXP_ID}"
+# MERGE_DATA_SOURCE_NAME = f"merge_with_ds2_late_th{pseudo_threshold}_by{EXP_ID}"
+MERGE_DATA_SOURCE_NAME = f"merge_ds1_ds2_given_ds2_pseudolabel_th{pseudo_threshold}_by{EXP_ID}"
 for kfold in [0, 1, 2, 3, 4]:
     image_prefix = f"/workspace/kaggle_hubmap_2023/input/{MERGE_DATA_SOURCE_NAME}/fold{kfold}/train"
     out_file = f"/workspace/kaggle_hubmap_2023/input/{MERGE_DATA_SOURCE_NAME}/fold{kfold}/train/annotation_coco.json"

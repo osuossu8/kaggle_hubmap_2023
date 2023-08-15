@@ -214,8 +214,19 @@ def dilate_predict_mask(out_mask):
         out_mask[i] = binary_dilation(out_mask[i])
     return out_mask
 
+def skimage_dilate_predict_mask(out_mask, areas=None):
+    iterations = 1
+    # from https://www.kaggle.com/code/hengck23/lb4-09-baseline-yolov7
+    for i in range(len(out_mask)):
+        if areas is None:
+            out_mask[i] = binary_dilation(out_mask[i])
+        else:
+            mask_area = areas[i]
+            if mask_area < 32*32:
+                out_mask[i] = binary_dilation(out_mask[i])
+    return out_mask
 
-def cv2_dilate_predict_mask(out_mask, kernel_size, areas=None):
+def both_dilate_predict_mask(out_mask, kernel_size, areas=None):
     iterations = 1
     # from https://www.kaggle.com/code/hengck23/lb4-09-baseline-yolov7
     for i in range(len(out_mask)):
@@ -227,6 +238,25 @@ def cv2_dilate_predict_mask(out_mask, kernel_size, areas=None):
         else:
             mask_area = areas[i]
             if mask_area < 32*32:
+                out_mask[i] = cv2.dilate(out_mask[i], kernel, iterations=iterations)
+                out_mask[i] = binary_dilation(out_mask[i])
+    return out_mask
+
+
+def cv2_dilate_predict_mask(out_mask, kernel_size, areas=None, area_threshold=32*32):
+    iterations = 1
+    # from https://www.kaggle.com/code/hengck23/lb4-09-baseline-yolov7
+    for i in range(len(out_mask)):
+        # kernel = np.ones(shape=(3, 3), dtype=np.uint8)
+        # kernel = np.ones(shape=(2, 1), dtype=np.uint8)
+        kernel = np.ones(shape=kernel_size, dtype=np.uint8)
+        if areas is None:
+            out_mask[i] = cv2.dilate(out_mask[i], kernel, iterations=iterations)
+        else:
+            mask_area = areas[i]
+            # if mask_area < 32*32:
+            # if mask_area < 30*30:
+            if mask_area < area_threshold:
                 out_mask[i] = cv2.dilate(out_mask[i], kernel, iterations=iterations)
     return out_mask
 
@@ -260,19 +290,64 @@ imgs = coco.loadImgs(imgIds)
 # EXP_IDs = ['065', '078', '050', '055']
 # EXP_IDs = ['065', '078', '050', '079']
 EXP_IDs_list =[
-    ['065', '078', '050', '079', '062'],
-    ['065', '078', '050', '055', '079'],
-    ['065', '079', '050', '055', '062'],
+    #['065', '078', '050', '079', '062', '055'], # 0.6718537211418152
+    #['065', '078', '050', '055', '079'], # 0.682167649269104
+    #['065', '078', '050', '062', '079'], # 0.6718279123306274
+    #['065', '078', '050', '068', '079'], # 0.6724762916564941
+    # ['065', '078', '050', '055', '079', '067'], # 0.6761897206306458
+    # ['065', '078', '050', '055', '079', '069'], # 0.664434552192688
+    #['065', '078', '050', '067', '079'], 0.676792323589325
+    #['067', '078', '050', '055', '079'], 0.6722208261489868
+    #['065', '067', '050', '055', '079'], 0.6770892143249512
+    #['065', '078', '067', '055', '079'], 0.6748729944229126
+
+    ['065', '078', '050', '055', '062'], # 0.6834691166877747
+    #['065', '078', '050', '055', '079'], # 0.682167649269104
+    #['065', '078', '050', '055', '067'], # 0.6841779351234436
+    #['065', '078', '050', '055', '068'], # 0.682630717754364
+
+    # ['065', '078', '050', '055', '079', '068'], # 0.6708478331565857
+    # ['065', '078', '050', '055', '079', '068', '062'], # 0.6637623310089111
+    #['065', '079', '050', '055', '062'],
 ]
 IOU_TH = 0.6
-WMF_IOU_TH = 0.6 
+WMF_IOU_TH = 0.6
 WMF_SKIP_MASK_THR = 0.0
 MASK_THRESHOLD = 0.1
 CONF_TYPE = 'soft_weight'
 
+# cfg.model.test_cfg.rcnn.max_per_img = 300, cfg.model.test_cfg.rcnn.score_thr = 0.0001, cfg.model.test_cfg.rcnn.nms.type = 'soft_nms', IOU_TH = 0.6, WMF_IOU_TH = 0.6
+# EXP_IDs_string : 065 079 050 055 062, 0.6776951551437378
+# EXP_IDs_string : 065 078 050 055 079, 0.6808645725250244
+# EXP_IDs_string : 065 078 050 079 062, 0.6733351945877075
+
+# cfg.model.test_cfg.rcnn.max_per_img = 100, IOU_TH = 0.6, WMF_IOU_TH = 0.6
+# EXP_IDs_string : 065 079 050 055 062, 0.679786205291748
+# EXP_IDs_string : 065 078 050 055 079, 0.682167649269104
+# EXP_IDs_string : 065 078 050 079 062, 0.6728789806365967
+
+# cfg.model.test_cfg.rcnn.max_per_img = 100, IOU_TH = 0.7, WMF_IOU_TH = 0.7
+# EXP_IDs_string : 065 079 050 055 062, 0.6702907681465149
+# EXP_IDs_string : 065 078 050 055 079, 0.6781980395317078
+# EXP_IDs_string : 065 078 050 079 062, 0.667856752872467
+
+# all mask dilate case
+# EXP_IDs_string : 065 078 050 055 079, 0.682167649269104
+# small mask dilate case
+# both : 0.6429862976074219
+# cv2.delite (2,1) : 0.6868593096733093 (32*32)
+# skimage : 0.6627681255340576
+# EXP_IDs_string : 065 078 050 055 079, 0.6876398324966431 (30*30)
+
+# not to use ~ 13*13 : 0.693474531173706
+# 14*14-15*15 : 0.693869411945343
+# 16*16 : 0.6930678486824036
+
 # for dilation_mode in ['cv2_2_1', 'cv2_3_3', 'skimage', 'both]:
 if 1:
     dilation_mode = 'cv2_2_1'
+    # dilation_mode = None
+    # dilation_mode = 'skimage'
     for EXP_IDs in EXP_IDs_list:
         EXP_IDs_string = ' '.join(EXP_IDs)
         models = []
@@ -287,12 +362,12 @@ if 1:
                 cfg = Config.fromfile(config_file)
                 if EXP_ID in ['065', '079']:
                     cfg.model.test_cfg.rcnn.score_thr = 0.0001
-                    cfg.model.test_cfg.rcnn.max_per_img = 300
+                    # cfg.model.test_cfg.rcnn.max_per_img = 300
                     cfg.model.test_cfg.rcnn.nms.type = 'soft_nms'
 
                 checkpoint_file = glob.glob(f'{work_dir_path}/best_coco_segm_mAP_epoch_*.pth')[-1]
                 model = init_detector(cfg, checkpoint_file, device='cuda:0')
-                if EXP_ID in ['078']:
+                if EXP_ID in ['078', '062', '067']:
                     model.cfg.test_pipeline[1].scale = (1024, 1024)
                     model.cfg.test_dataloader.dataset.pipeline[1].scale = (1024, 1024)
                 models.append(model) 
@@ -359,17 +434,17 @@ if 1:
                 ens_masks = ens_masks > MASK_THRESHOLD
                 ens_masks = np.array(ens_masks, dtype=np.uint8)
 
-                ens_mask_areas = [np.sum(m.flatten()) for m in ens_masks]
+                area_threshold = 13*13 # 32*32 # 30*30 # 28*28 # 121 # 32*32
+                # ens_mask_areas = [np.sum(m.flatten()) for m in ens_masks]
                 ens_mask_areas = None
                 if dilation_mode == 'cv2_2_1':   
-                    ens_masks = cv2_dilate_predict_mask(ens_masks, kernel_size=(2, 1), areas=ens_mask_areas)
+                    ens_masks = cv2_dilate_predict_mask(ens_masks, kernel_size=(2, 1), areas=ens_mask_areas, area_threshold=area_threshold)
                 elif dilation_mode == 'cv2_3_3':
-                    ens_masks = cv2_dilate_predict_mask(ens_masks, kernel_size=(3, 3), areas=ens_mask_areas)
+                    ens_masks = cv2_dilate_predict_mask(ens_masks, kernel_size=(3, 3), areas=ens_mask_areas, area_threshold=area_threshold)
                 elif dilation_mode == 'skimage':
-                    ens_masks = dilate_predict_mask(ens_masks)
+                    ens_masks = skimage_dilate_predict_mask(ens_masks, areas=ens_mask_areas)
                 elif dilation_mode == 'both':
-                    ens_masks = cv2_dilate_predict_mask(ens_masks, kernel_size=(2, 1), areas=ens_mask_areas)
-                    ens_masks = dilate_predict_mask(ens_masks)
+                    ens_masks = both_dilate_predict_mask(ens_masks, kernel_size=(2, 1), areas=ens_mask_areas)
                 else:
                     pass
                 ens_masks = np.array(ens_masks, dtype=bool)
